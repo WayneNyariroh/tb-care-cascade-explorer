@@ -152,16 +152,6 @@ The terminal prints the local URL, normally:
 http://localhost:8501
 ```
 
-## Deploy on Streamlit Community Cloud
-
-1. Push this folder to a GitHub repository.
-2. Sign in to Streamlit Community Cloud.
-3. Create a new app and select the repository.
-4. Set the entry point to `app.py`.
-5. Deploy.
-
-No API key or secret is required for the WHO CSV endpoints.
-
 ## Project structure
 
 ```text
@@ -176,8 +166,6 @@ kenya_tb_care_cascade/
 └── .streamlit/
     └── config.toml
 ```
-
-## Why the data layer is separated
 
 `data.py` handles downloading, caching, country filtering, variable mapping and
 derived metrics. `charts.py` only builds visualizations. `app.py` handles the
