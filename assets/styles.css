@@ -1,0 +1,167 @@
+:root {
+  --ink: #172033;
+  --muted: #667085;
+  --line: #E3E8EF;
+  --blue: #1558D6;
+  --surface: #FFFFFF;
+  --bg: #F6F8FB;
+}
+
+html, body, [class*="css"] {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.stApp {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.block-container {
+  max-width: 1320px;
+  padding-top: 2.4rem;
+  padding-bottom: 3rem;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+h1 {
+  font-size: clamp(2.2rem, 4vw, 4.2rem) !important;
+  line-height: 0.98 !important;
+  max-width: 900px;
+  margin: .35rem 0 .8rem !important;
+}
+
+h2 {
+  margin-top: .35rem !important;
+}
+
+.eyebrow {
+  color: var(--blue);
+  font-size: .74rem;
+  letter-spacing: .12em;
+  font-weight: 750;
+}
+
+.hero-copy {
+  color: var(--muted);
+  font-size: 1.06rem;
+  max-width: 760px;
+  margin: 0 0 1.8rem;
+}
+
+.metric-card {
+  min-height: 142px;
+  padding: 1.05rem 1.15rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: 0 3px 16px rgba(16, 24, 40, .035);
+}
+
+.metric-label {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 650;
+}
+
+.metric-value, .big-number {
+  color: var(--ink);
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -.035em;
+  font-weight: 760;
+  margin-top: .48rem;
+}
+
+.metric-note {
+  color: #7A8497;
+  font-size: .75rem;
+  margin-top: .45rem;
+}
+
+.scenario-banner {
+  border-left: 4px solid #EAA937;
+  background: #FFF8E8;
+  padding: .8rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0 10px 10px 0;
+  color: #5B430C;
+}
+
+.interpretation {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 14px;
+  padding: 1rem 1.15rem .75rem;
+  margin-top: .25rem;
+}
+
+.interpretation-title {
+  font-weight: 720;
+  margin-bottom: .35rem;
+}
+
+.interpretation p {
+  color: #4A5568;
+  max-width: 1000px;
+}
+
+.outcome-summary {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 14px;
+  padding: 1.2rem;
+  margin-top: .65rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .58rem 0;
+  border-bottom: 1px solid #EEF1F5;
+  color: #4A5568;
+}
+
+.summary-row:last-child {
+  border-bottom: 0;
+}
+
+.footer {
+  color: #8A94A6;
+  font-size: .73rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  margin-top: 2.5rem;
+}
+
+div[data-testid="stPlotlyChart"] {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: .35rem;
+}
+
+div[data-testid="stTab"] {
+    width: 100% !important;
+}
+
+div[data-testid="stTab"] div[data-baseweb="tab-list"] {
+    width: 100% !important;
+    display: flex !important;
+}
+
+div[data-testid="stTab"] div[data-baseweb="tab-list"] button {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    justify-content: center !important;
+    font-weight: 650 !important;
+}
+
+section[data-testid="stSidebar"] {
+  background: #FFFFFF;
+  border-right: 1px solid var(--line);
+}
