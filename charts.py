@@ -34,8 +34,7 @@ def cascade_sankey(
     failed: Optional[float],
     lost: Optional[float],
     not_evaluated: Optional[float],
-    outcome_year: Optional[int],
-) -> go.Figure:
+    outcome_year: Optional[int],) -> go.Figure:
     incidence = max(float(incidence or 0), 0)
     notified = max(min(float(notified or 0), incidence), 0)
     missing = max(incidence - notified, 0)
@@ -105,7 +104,7 @@ def cascade_sankey(
     title = "Observed-data care cascade"
     fig = go.Figure(
         go.Sankey(
-            arrangement="snap",
+            arrangement="fixed",
             valueformat=",.0f",
             node=dict(
                 pad=26,
@@ -141,8 +140,8 @@ def cascade_sankey(
     )
     fig.update_layout(
         title=dict(text=title, x=0, xanchor="left", font=dict(size=18)),
-        font=dict(size=12, color=INK),
-        margin=dict(l=18, r=18, t=60, b=20),
+        font=dict(size=10, color=INK),
+        margin=dict(l=30, r=110, t=60, b=30),
         height=560,
         paper_bgcolor="white",
         plot_bgcolor="white",

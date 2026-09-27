@@ -2,7 +2,7 @@
   --ink: #172033;
   --muted: #667085;
   --line: #E3E8EF;
-  --blue: #1558D6;
+  --blue: #10ab18;
   --surface: #FFFFFF;
   --bg: #F6F8FB;
 }
@@ -68,7 +68,7 @@ h2 {
 }
 
 .metric-value, .big-number {
-  color: var(--ink);
+  color: var(--blue);
   font-size: 2rem;
   line-height: 1.15;
   letter-spacing: -.035em;
@@ -80,15 +80,6 @@ h2 {
   color: #7A8497;
   font-size: .75rem;
   margin-top: .45rem;
-}
-
-.scenario-banner {
-  border-left: 4px solid #EAA937;
-  background: #FFF8E8;
-  padding: .8rem 1rem;
-  margin-bottom: 1rem;
-  border-radius: 0 10px 10px 0;
-  color: #5B430C;
 }
 
 .interpretation {
