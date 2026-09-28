@@ -27,10 +27,11 @@ from data import (
     row_for_year,
 )
 
+page_icon = "icon/favicon.svg"
 
 st.set_page_config(
     page_title="Kenya TB Care Cascade Explorer",
-    page_icon="◉",
+    page_icon=page_icon,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
