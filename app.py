@@ -59,6 +59,47 @@ def metric_card(label: str, value: str, note: str = "") -> None:
     )
 
 
+def cascade_detail_table(
+    title: str,
+    period: str,
+    sections: list[tuple[str, list[tuple[str, str, str, str]]]],
+    note: str = "",
+) -> None:
+    body_parts = []
+    for section, rows in sections:
+        body_parts.append(
+            f"<tr class='detail-section'><th colspan='4'>{section}</th></tr>"
+        )
+        body_parts.extend(
+            "<tr>"
+            f"<th scope='row'>{label}</th>"
+            f"<td>{value}</td><td>{share}</td><td>{denominator}</td>"
+            "</tr>"
+            for label, value, share, denominator in rows
+        )
+    body = "".join(body_parts)
+    note_html = f"<p class='detail-note'>{note}</p>" if note else ""
+    st.markdown(
+        f"""
+        <div class="detail-table-card">
+          <div class="detail-table-heading">
+            <div>{title}</div><span>{period}</span>
+          </div>
+          <div class="detail-table-scroll">
+            <table class="detail-table">
+              <thead>
+                <tr><th>Stage or outcome</th><th>People</th><th>Share</th><th>Denominator</th></tr>
+              </thead>
+              <tbody>{body}</tbody>
+            </table>
+          </div>
+          {note_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 load_css()
 
 st.markdown(
@@ -123,23 +164,54 @@ country_est = filter_country(datasets["estimates"], country)
 country_notif = filter_country(datasets["notifications"], country)
 country_out = filter_country(datasets["outcomes"], country)
 
-years = available_years(country_est, country_notif)
+current_year = datetime.now(timezone.utc).year
+estimate_years = set(available_years(country_est))
+notification_years = set(available_years(country_notif))
+outcome_years = set(available_years(country_out))
+
+years = []
+for year in sorted(estimate_years & notification_years & outcome_years):
+    if not 2015 <= year <= current_year:
+        continue
+    candidate_est, _ = row_for_year(country_est, year)
+    candidate_notif, _ = row_for_year(country_notif, year)
+    candidate_out, _ = row_for_year(country_out, year)
+    if (
+        incidence_metrics(candidate_est).get("incidence") is not None
+        and notification_metrics(candidate_notif).get("notified") is not None
+        and outcome_metrics(candidate_out).get("cohort") is not None
+    ):
+        years.append(year)
+
 if not years:
-    st.error(f"No usable annual data were found for {country}.")
+    st.error(
+        f"No complete cascade cohort from 2015 through {current_year} was found for {country}."
+    )
     st.stop()
+
+reporting_years = [
+    year
+    for year in sorted(estimate_years & notification_years)
+    if 2015 <= year <= current_year
+]
+latest_reporting_year = max(reporting_years) if reporting_years else None
+latest_complete_cohort_year = max(years)
 
 with st.sidebar:
     selected_year = st.selectbox(
-        "Reporting year",
+        "Treatment cohort enrollment year",
         sorted(years, reverse=True),
         index=0,
     )
+    if latest_reporting_year and latest_reporting_year > latest_complete_cohort_year:
+        st.caption(
+            f"Burden and notifications extend to {latest_reporting_year}. "
+            f"The latest complete outcome cohort is {latest_complete_cohort_year}."
+        )
 
 est_row, est_year = row_for_year(country_est, selected_year)
 notif_row, notif_year = row_for_year(country_notif, selected_year)
-out_row, outcome_year = row_for_year(
-    country_out, selected_year, fallback_to_latest_prior=True
-)
+out_row, outcome_year = row_for_year(country_out, selected_year)
 
 im = incidence_metrics(est_row)
 nm = notification_metrics(notif_row)
@@ -147,6 +219,8 @@ om = outcome_metrics(out_row)
 
 incidence = im.get("incidence")
 notified = nm.get("notified")
+cohort = om.get("cohort")
+success = om.get("success")
 
 if incidence is None or notified is None:
     st.warning(
@@ -155,27 +229,21 @@ if incidence is None or notified is None:
     )
     st.stop()
 
+if cohort is None:
+    st.warning(
+        f"The selected cohort year ({selected_year}) does not contain a treatment cohort. "
+        "Try another year."
+    )
+    st.stop()
+
 notification_gap = max(incidence - notified, 0)
 notification_coverage = 100 * notified / incidence if incidence else None
 
-cohort = om.get("cohort")
-success = om.get("success")
 treatment_success_pct = (
     100 * success / cohort
     if cohort not in (None, 0) and success is not None
     else None
 )
-
-sankey_values = dict(
-        incidence=incidence,
-        notified=notified,
-        cohort=cohort,
-        success=success,
-        died=om.get("died"),
-        failed=om.get("failed"),
-        lost=om.get("lost"),
-        not_evaluated=om.get("not_evaluated"),
-    )
 
 if country != "Kenya":
     st.info(
@@ -190,58 +258,132 @@ with c1:
         f"WHO estimate · {selected_year}",
     )
 with c2:
-    shown_notified = sankey_values["notified"] 
     metric_card(
         "Notified cases",
-        fmt_int(shown_notified),
+        fmt_int(notified),
         f"Reported · {selected_year}",
     )
 with c3:
-    shown_coverage = (
-        100 * shown_notified / incidence if incidence else None
-    )
     metric_card(
         "Notification coverage",
-        fmt_pct(shown_coverage),
+        fmt_pct(notification_coverage),
         "Notifications ÷ estimated incidence",
     )
 with c4:
-    shown_success = (
-        100 * sankey_values["success"] / sankey_values["cohort"]
-        if sankey_values["cohort"]
-        else None
-    )
     metric_card(
         "Treatment success",
-        fmt_pct(shown_success),
+        fmt_pct(treatment_success_pct),
         (
          f"WHO treatment cohort · {outcome_year or 'N/A'}"
         ),
     )
 
 tabs = st.tabs(
-    ["Care cascade", "Historical trends", "Treatment outcomes", "About the data"]
+    ["Cascade", "Trends", "Outcomes", "Data notes"]
 )
 
 with tabs[0]:
-    st.markdown("## From TB burden to treatment outcomes")
+    st.markdown(f"## {selected_year} TB care cascade — cohort aligned")
     st.caption(
-        f"{country}, {selected_year}. "
-        + (
-            f"Treatment outcomes use the latest available cohort at or before "
-            f"{selected_year}: {outcome_year}."
-            if outcome_year and outcome_year != selected_year
-            else f"Treatment outcome cohort: {outcome_year or 'not available'}."
-        )
+        f"{country}. Incidence and notification describe calendar year {selected_year}. "
+        f"Treatment outcomes relate to people enrolled in the {selected_year} cohort "
+        "and were observed later. These are aligned aggregates, not person-linked records."
     )
 
-    fig = cascade_sankey(
-        outcome_year=outcome_year,
-        **sankey_values,
+    st.markdown(
+        """
+        <div class="cascade-stage-rail" aria-label="Cascade stages">
+          <div><span>01</span>Burden</div>
+          <div><span>02</span>Notification</div>
+          <div><span>03</span><span class="stage-long">Outcome cohort</span><span class="stage-short">Cohort</span></div>
+          <div><span>04</span><span class="stage-long">Treatment outcomes</span><span class="stage-short">Outcomes</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    st.plotly_chart(fig, 
-                    width="stretch", 
-                    config={"displayModeBar": False})
+
+    st.plotly_chart(
+        cascade_sankey(
+            incidence=incidence,
+            notified=notified,
+            outcome_metrics=om,
+            cohort_year=selected_year,
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+        key="cascade_sankey_desktop",
+    )
+    st.plotly_chart(
+        cascade_sankey(
+            incidence=incidence,
+            notified=notified,
+            outcome_metrics=om,
+            cohort_year=selected_year,
+            compact=True,
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+        key="cascade_sankey_mobile",
+    )
+
+    gap_pct = 100 * notification_gap / incidence if incidence else None
+    notification_cohort_difference = notified - cohort
+    reconciliation_value = abs(notification_cohort_difference)
+    reconciliation_pct = 100 * reconciliation_value / notified if notified else None
+    if notification_cohort_difference >= 0:
+        reconciliation_label = "Not included in outcome-cohort aggregate"
+    else:
+        reconciliation_label = "Additional records in outcome-cohort aggregate"
+
+    incidence_range = ""
+    if im.get("incidence_lo") is not None and im.get("incidence_hi") is not None:
+        incidence_range = (
+            f"WHO-reported uncertainty range: {fmt_int(im.get('incidence_lo'))}–"
+            f"{fmt_int(im.get('incidence_hi'))}."
+        )
+
+    outcome_rows = []
+    for label, key in [
+        ("Treatment success", "success"),
+        ("Died", "died"),
+        ("Lost to follow-up", "lost"),
+        ("Treatment failed", "failed"),
+        ("Not evaluated", "not_evaluated"),
+        ("Residual / not separately classified", "other_or_unclassified"),
+    ]:
+        value = om.get(key)
+        if value is None or value <= 0:
+            continue
+        share = 100 * value / cohort if cohort else None
+        outcome_rows.append((label, fmt_int(value), fmt_pct(share), "Outcome cohort"))
+
+    cascade_detail_table(
+        "Cascade detail",
+        f"Cohort {selected_year}",
+        [
+            (
+                "Burden and notification",
+                [
+                    ("Estimated incidence", fmt_int(incidence), "100.0%", "Incidence point estimate"),
+                    ("Notified cases", fmt_int(notified), fmt_pct(notification_coverage), "Incidence point estimate"),
+                    ("Estimated notification gap", fmt_int(notification_gap), fmt_pct(gap_pct), "Incidence point estimate"),
+                ],
+            ),
+            (
+                "Cohort reconciliation",
+                [
+                    ("Outcome cohort", fmt_int(cohort), "100.0%", "Outcome cohort"),
+                    (reconciliation_label, fmt_int(reconciliation_value), fmt_pct(reconciliation_pct), "Notifications"),
+                ],
+            ),
+            ("Treatment outcomes", outcome_rows),
+        ],
+        (
+            f"{incidence_range} The notification–cohort difference reconciles two "
+            "aggregate definitions; it is not a treatment outcome. Residual is the "
+            "cohort total minus the outcome categories separately reported in the export."
+        ),
+    )
 
     st.markdown(
             f"""
@@ -253,6 +395,10 @@ with tabs[0]:
                 new and relapse cases were notified. The arithmetic difference,
                 <b>{fmt_int(notification_gap)}</b>, is shown as a notification gap.
                 It should not be interpreted as a direct count of undiagnosed people.
+                Of the notifications, <b>{fmt_int(cohort)}</b> are represented in the
+                new-and-recurrent outcome cohort. The <b>{fmt_int(reconciliation_value)}</b>
+                difference is an aggregate reconciliation item—not evidence that those
+                people were untreated. Only the outcome cohort feeds the treatment outcomes.
               </p>
             </div>
             """,
@@ -269,17 +415,21 @@ with tabs[1]:
     st.markdown("## Historical trends")
     st.caption(
         "WHO re-estimates historical TB burden when methods or evidence change. "
-        "Use the latest time series as a coherent series rather than mixing releases."
+        "Use the latest time series as a coherent series rather than mixing releases. "
+        f"Burden and notification data extend to {latest_reporting_year or 'the latest available year'}; "
+        f"the latest complete treatment-outcome cohort is {latest_complete_cohort_year}."
     )
     st.plotly_chart(
         trend_chart(history),
-        use_container_width=True,
+        width="stretch",
         config={"displayModeBar": False},
+        key="trend_chart",
     )
     st.plotly_chart(
         coverage_chart(history),
-        use_container_width=True,
+        width="stretch",
         config={"displayModeBar": False},
+        key="coverage_chart",
     )
 
     export_cols = [
@@ -295,8 +445,9 @@ with tabs[1]:
         "failed",
         "lost_to_follow_up",
         "not_evaluated",
+        "other_or_unclassified",
     ]
-    downloadable = history[export_cols].sort_values("year")
+    downloadable = history.reindex(columns=export_cols).sort_values("year")
     st.download_button(
         "Download country time series (.csv)",
         downloadable.to_csv(index=False).encode("utf-8"),
@@ -313,8 +464,9 @@ with tabs[2]:
         with oc1:
             st.plotly_chart(
                 outcome_bar(om, outcome_year),
-                use_container_width=True,
+                width="stretch",
                 config={"displayModeBar": False},
+                key="outcomes_tab_chart",
             )
         with oc2:
             st.markdown(
@@ -329,6 +481,7 @@ with tabs[2]:
                   <div class="summary-row"><span>Failed</span><b>{fmt_int(om.get("failed"))}</b></div>
                   <div class="summary-row"><span>Lost to follow-up</span><b>{fmt_int(om.get("lost"))}</b></div>
                   <div class="summary-row"><span>Not evaluated</span><b>{fmt_int(om.get("not_evaluated"))}</b></div>
+                  <div class="summary-row"><span>Residual / unclassified</span><b>{fmt_int(om.get("other_or_unclassified"))}</b></div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -343,10 +496,11 @@ with tabs[3]:
         combines WHO modelled burden estimates with country-reported surveillance
         data and presents them as an interactive care cascade and historical time series.
 
-        The Sankey view is designed to make losses between stages visible while keeping
-        modelled estimates separate from reported programme counts. Treatment outcomes
-        are linked to their own cohort year because these data may become available later
-        than incidence and notification data.
+        The cascade aligns modelled burden, notifications and the treatment cohort to the
+        same enrollment year. Treatment outcomes occur later but remain attributed to the
+        year in which the cohort was enrolled. The selector therefore includes only years
+        with a complete outcome cohort; newer burden and notification data remain visible
+        in Trends.
         """
     )
 
@@ -361,6 +515,10 @@ with tabs[3]:
           cases. It is an analytical gap, not a direct enumeration of undiagnosed people.
         - **Treatment success** uses the WHO new-and-relapse treatment cohort where
           available.
+        - **Notification–cohort reconciliation** is the difference between the notification
+          aggregate and the outcome-cohort aggregate. It is not labelled as untreated.
+        - **Residual / not separately classified** is calculated as the outcome cohort minus
+          the outcome categories separately reported in the WHO export.
         """
     )
 

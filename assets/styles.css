@@ -108,6 +108,94 @@ h2 {
   margin-top: .65rem;
 }
 
+.detail-table-card {
+  height: 100%;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+}
+
+.detail-table-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 750;
+  margin-bottom: .65rem;
+}
+
+.detail-table-heading span {
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .84rem;
+}
+
+.detail-table-scroll {
+  overflow-x: auto;
+}
+
+.detail-table th,
+.detail-table td {
+  padding: .55rem .25rem;
+  border-bottom: 1px solid #EEF1F5;
+  text-align: right;
+  vertical-align: top;
+}
+
+.detail-table th:first-child {
+  text-align: left;
+}
+
+.detail-table th:nth-child(2),
+.detail-table td:nth-child(2),
+.detail-table th:nth-child(3),
+.detail-table td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.detail-table th:last-child,
+.detail-table td:last-child {
+  color: var(--muted);
+  min-width: 9.5rem;
+}
+
+.detail-table thead th {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.detail-table tbody th {
+  color: #4A5568;
+  font-weight: 600;
+}
+
+.detail-table .detail-section th {
+  background: #F5F7FA;
+  border-bottom-color: #E2E6EC;
+  color: #596273;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .075em;
+  padding: .55rem .5rem;
+  text-transform: uppercase;
+}
+
+.detail-note {
+  color: #7A8497;
+  font-size: .73rem;
+  line-height: 1.45;
+  margin: .7rem 0 0;
+}
+
 .summary-row {
   display: flex;
   justify-content: space-between;
@@ -130,10 +218,48 @@ h2 {
 }
 
 div[data-testid="stPlotlyChart"] {
+  box-sizing: border-box;
+  overflow: hidden;
   background: white;
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: .35rem;
+}
+
+.st-key-cascade_sankey_mobile {
+  display: none;
+}
+
+.cascade-stage-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .55rem;
+  margin: .85rem 0 .45rem;
+}
+
+.cascade-stage-rail > div {
+  align-items: center;
+  background: #F5F7FA;
+  border: 1px solid #E2E6EC;
+  border-radius: 9px;
+  color: #4F596A;
+  display: flex;
+  font-size: .7rem;
+  font-weight: 800;
+  gap: .45rem;
+  letter-spacing: .055em;
+  min-width: 0;
+  padding: .55rem .65rem;
+  text-transform: uppercase;
+}
+
+.cascade-stage-rail > div > span:first-child {
+  color: #8A93A2;
+  font-size: .62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-short {
+  display: none;
 }
 
 div[data-testid="stTab"] {
@@ -146,8 +272,9 @@ div[data-testid="stTab"] div[data-baseweb="tab-list"] {
 }
 
 div[data-testid="stTab"] div[data-baseweb="tab-list"] button {
-    flex: 1 1 0 !important;
-    width: 100% !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
     justify-content: center !important;
     font-weight: 650 !important;
 }
@@ -155,4 +282,69 @@ div[data-testid="stTab"] div[data-baseweb="tab-list"] button {
 section[data-testid="stSidebar"] {
   background: #FFFFFF;
   border-right: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .block-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1.6rem;
+  }
+
+  .metric-card {
+    min-height: 126px;
+  }
+
+  div[data-testid="stTab"] div[data-baseweb="tab-list"] {
+    gap: .15rem !important;
+  }
+
+  div[data-testid="stTab"] div[data-baseweb="tab-list"] button {
+    padding-left: .35rem !important;
+    padding-right: .35rem !important;
+    font-size: .78rem !important;
+  }
+
+  .detail-table-card {
+    padding: .9rem;
+  }
+
+  .detail-table {
+    font-size: .8rem;
+  }
+
+  .st-key-cascade_sankey_desktop {
+    display: none;
+  }
+
+  .st-key-cascade_sankey_mobile {
+    display: block;
+  }
+
+  .cascade-stage-rail {
+    gap: .25rem;
+    margin-top: .7rem;
+  }
+
+  .cascade-stage-rail > div {
+    display: block;
+    font-size: .57rem;
+    letter-spacing: .025em;
+    padding: .45rem .25rem;
+    text-align: center;
+  }
+
+  .cascade-stage-rail > div > span:first-child {
+    display: block;
+    font-size: .52rem;
+    margin-bottom: .12rem;
+  }
+
+  .stage-long {
+    display: none;
+  }
+
+  .stage-short {
+    display: inline;
+  }
 }

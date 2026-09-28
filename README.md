@@ -8,16 +8,13 @@ The project pulls the WHO Global TB Database at runtime.
 
 ## What the app contains
 
-- **Care cascade Sankey**
-  - estimated TB incidence
-  - notified new and relapse cases
-  - notification gap
-  - new-and-relapse treatment cohort
-  - treatment success
-  - deaths
-  - treatment failure
-  - loss to follow-up
-  - not evaluated
+- **Cohort-aligned care cascade**
+  - a full Sankey from estimated incidence through notification and the
+    treatment cohort to treatment outcomes
+  - terminal branches for the estimated notification gap and the
+    notification-to-cohort reconciliation difference, kept visually separate
+    from treatment outcomes
+  - a grouped count-and-share table with the correct denominator for every row
 
 - **Historical trends**
   - estimated incidence vs notifications
@@ -41,7 +38,9 @@ The project pulls the WHO Global TB Database at runtime.
 - Plotly
 - Requests
 
-Plotly's `go.Sankey` provides the central flow visualization.
+Plotly's `go.Sankey` provides the cohort-aligned care cascade. The Sankey is an
+aggregate comparison rather than a person-linked patient flow: only the outcome
+cohort feeds the treatment-outcome branches.
 
 ## Data sources
 
@@ -112,9 +111,16 @@ The difference can reflect people who were not diagnosed, people diagnosed but
 not notified, reporting incompleteness, private-sector gaps, and uncertainty in
 the incidence estimate.
 
-Treatment outcomes may refer to an earlier cohort than the selected reporting
-year. When an exact outcome year is unavailable, the app uses the latest cohort
-at or before the selected year and displays that cohort year explicitly.
+The main selector is the **treatment cohort enrollment year** and includes only
+years for which incidence, notifications and treatment-cohort outcomes are all
+available. Outcomes occur later but remain attributed to the cohort's enrollment
+year. Newer incidence and notification years remain available in the Trends tab;
+the app never substitutes an earlier outcome cohort into a newer cascade.
+
+The notification-to-cohort difference reconciles two aggregate definitions and
+must not be interpreted as a count of people who were not treated. The residual
+outcome is calculated as the treatment cohort minus the outcome categories
+separately reported in the WHO export.
 
 ## Run locally
 

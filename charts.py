@@ -28,121 +28,159 @@ def _fmt(value: Optional[float]) -> str:
 def cascade_sankey(
     incidence: float,
     notified: float,
-    cohort: Optional[float],
-    success: Optional[float],
-    died: Optional[float],
-    failed: Optional[float],
-    lost: Optional[float],
-    not_evaluated: Optional[float],
-    outcome_year: Optional[int],) -> go.Figure:
+    outcome_metrics: dict,
+    cohort_year: Optional[int],
+    compact: bool = False,
+) -> go.Figure:
     incidence = max(float(incidence or 0), 0)
-    notified = max(min(float(notified or 0), incidence), 0)
-    missing = max(incidence - notified, 0)
+    notified = max(float(notified or 0), 0)
+    cohort = max(float(outcome_metrics.get("cohort") or 0), 0)
+    notification_gap = max(incidence - notified, 0)
 
-    cohort = max(float(cohort or notified), 0)
-    success = max(float(success or 0), 0)
-    died = max(float(died or 0), 0)
-    failed = max(float(failed or 0), 0)
-    lost = max(float(lost or 0), 0)
-    not_evaluated = max(float(not_evaluated or 0), 0)
-
-    known_outcomes = success + died + failed + lost + not_evaluated
-    other = max(cohort - known_outcomes, 0)
+    outcomes = [
+        ("Treatment success", "success", GREEN, "rgba(20,108,46,0.34)"),
+        ("Died", "died", ORANGE, "rgba(216,89,0,0.30)"),
+        ("Lost to follow-up", "lost", AMBER, "rgba(234,169,55,0.34)"),
+        ("Treatment failed", "failed", RED, "rgba(192,21,29,0.28)"),
+        ("Not evaluated", "not_evaluated", PURPLE, "rgba(104,29,168,0.26)"),
+        (
+            "Residual / unclassified",
+            "other_or_unclassified",
+            "#7C8799",
+            "rgba(124,135,153,0.28)",
+        ),
+    ]
+    outcomes = [
+        (label, max(float(outcome_metrics.get(key) or 0), 0), color, link_color)
+        for label, key, color, link_color in outcomes
+        if outcome_metrics.get(key) is not None
+        and float(outcome_metrics.get(key) or 0) > 0
+    ]
 
     labels = [
-        "Estimated TB incidence",
-        "Notified cases",
-        "Notification gap",
-        f"Treatment cohort{f' ({outcome_year})' if outcome_year else ''}",
-        "Treatment success",
-        "Died",
-        "Treatment failed",
-        "Lost to follow-up",
-        "Not evaluated",
-        "Other / unclassified",
+        f"{'Incidence' if compact else 'Estimated incidence'}<br><b>{_fmt(incidence)}</b>",
+        f"{'Notified' if compact else 'Notified cases'}<br><b>{_fmt(notified)}</b>",
+        f"{'Est. gap' if compact else 'Estimated notification gap'}<br><b>{_fmt(notification_gap)}</b>",
+        f"{'Cohort' if compact else 'Outcome cohort'}<br><b>{_fmt(cohort)}</b>",
+    ]
+    node_colors = [BLUE, "#2E7D6E", "#CBD1D9", PURPLE]
+    node_x = [0.01, 0.31, 0.31, 0.59]
+    node_y = [0.10, 0.04, 0.84, 0.04]
+    node_customdata = [
+        "WHO modelled incidence point estimate",
+        "New, recurrent and unknown previous-treatment-history cases reported",
+        "Point estimate minus notifications; not a counted outcome",
+        "New-and-recurrent cohort included in treatment-outcome reporting",
     ]
 
-    sources = [0, 0, 1, 3, 3, 3, 3, 3, 3]
-    targets = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    values = [
-        notified,
-        missing,
-        max(min(cohort, notified), 0),
-        success,
-        died,
-        failed,
-        lost,
-        not_evaluated,
-        other,
+    sources = [0, 0]
+    targets = [1, 2]
+    values = [notified, notification_gap]
+    link_colors = ["rgba(46,125,110,0.32)", "rgba(180,187,197,0.28)"]
+    link_customdata = [
+        "Reported notifications",
+        "Estimated notification gap",
     ]
 
-    node_colors = [
-        BLUE,
-        BLUE_LIGHT,
-        GREY,
-        PURPLE,
-        GREEN,
-        ORANGE,
-        RED,
-        AMBER,
-        GREY,
-        GREY_LIGHT,
-    ]
+    if notified >= cohort:
+        reconciliation = notified - cohort
+        labels.append(
+            ("Recon.<br>" if compact else "Notification–cohort<br>reconciliation<br>")
+            + f"<b>{_fmt(reconciliation)}</b>"
+        )
+        node_colors.append("#E7E9ED")
+        node_x.append(0.59)
+        node_y.append(0.97 if compact else 0.90)
+        node_customdata.append(
+            "Aggregate definition and reporting difference; not a treatment outcome"
+        )
+        sources.extend([1, 1])
+        targets.extend([3, 4])
+        values.extend([cohort, reconciliation])
+        link_colors.extend(["rgba(104,29,168,0.28)", "rgba(190,195,203,0.30)"])
+        link_customdata.extend(
+            ["Included in outcome cohort", "Notification–cohort reconciliation"]
+        )
+    else:
+        reconciliation = cohort - notified
+        labels.append(
+            ("Recon.<br>" if compact else "Additional cohort<br>reconciliation<br>")
+            + f"<b>{_fmt(reconciliation)}</b>"
+        )
+        node_colors.append("#E7E9ED")
+        node_x.append(0.31)
+        node_y.append(0.97 if compact else 0.90)
+        node_customdata.append(
+            "Outcome cohort exceeds the notification aggregate; not a treatment outcome"
+        )
+        sources.extend([1, 4])
+        targets.extend([3, 3])
+        values.extend([notified, reconciliation])
+        link_colors.extend(["rgba(104,29,168,0.28)", "rgba(190,195,203,0.30)"])
+        link_customdata.extend(
+            ["Reported notifications", "Additional cohort reconciliation"]
+        )
 
-    link_colors = [
-        "rgba(21,88,214,0.34)",
-        "rgba(154,160,166,0.26)",
-        "rgba(104,29,168,0.28)",
-        "rgba(20,108,46,0.34)",
-        "rgba(216,89,0,0.30)",
-        "rgba(192,21,29,0.30)",
-        "rgba(234,169,55,0.34)",
-        "rgba(154,160,166,0.28)",
-        "rgba(218,220,224,0.55)",
-    ]
+    outcome_y = [0.01, 0.64, 0.73, 0.81, 0.87, 0.92]
+    for index, (label, value, color, link_color) in enumerate(outcomes):
+        outcome_index = len(labels)
+        share = 100 * value / cohort if cohort else 0
+        compact_label = {
+            "Treatment success": "Success",
+            "Lost to follow-up": "Lost",
+            "Treatment failed": "Failed",
+            "Residual / unclassified": "Residual",
+        }.get(label, label)
+        shown_label = compact_label if compact else label
+        labels.append(f"{shown_label}<br><b>{_fmt(value)} · {share:.1f}%</b>")
+        node_colors.append(color)
+        node_x.append(0.91)
+        node_y.append(outcome_y[min(index, len(outcome_y) - 1)])
+        node_customdata.append(f"{share:.1f}% of the outcome cohort")
+        sources.append(3)
+        targets.append(outcome_index)
+        values.append(value)
+        link_colors.append(link_color)
+        link_customdata.append(label)
 
-    title = "Observed-data care cascade"
     fig = go.Figure(
         go.Sankey(
             arrangement="fixed",
             valueformat=",.0f",
             node=dict(
-                pad=26,
+                pad=20,
                 thickness=20,
-                line=dict(color="rgba(0,0,0,0)", width=0),
+                line=dict(color="rgba(255,255,255,0.92)", width=1),
                 label=labels,
                 color=node_colors,
-                customdata=[
-                    _fmt(incidence),
-                    _fmt(notified),
-                    _fmt(missing),
-                    _fmt(cohort),
-                    _fmt(success),
-                    _fmt(died),
-                    _fmt(failed),
-                    _fmt(lost),
-                    _fmt(not_evaluated),
-                    _fmt(other),
-                ],
-                hovertemplate="<b>%{label}</b><br>%{customdata}<extra></extra>",
+                x=node_x,
+                y=node_y,
+                customdata=node_customdata,
+                hovertemplate=(
+                    "<b>%{label}</b><br>%{customdata}<extra></extra>"
+                ),
             ),
             link=dict(
                 source=sources,
                 target=targets,
                 value=values,
                 color=link_colors,
+                customdata=link_customdata,
                 hovertemplate=(
                     "%{source.label} → %{target.label}"
-                    "<br><b>%{value:,.0f}</b><extra></extra>"
+                    "<br><b>%{value:,.0f}</b><br>%{customdata}<extra></extra>"
                 ),
             ),
         )
     )
     fig.update_layout(
-        title=dict(text=title, x=0, xanchor="left", font=dict(size=18)),
-        font=dict(size=10, color=INK),
-        margin=dict(l=30, r=110, t=60, b=30),
-        height=560,
+        font=dict(size=9 if compact else 11, color=INK),
+        margin=(
+            dict(l=12, r=66, t=28, b=24)
+            if compact
+            else dict(l=34, r=152, t=28, b=32)
+        ),
+        height=540 if compact else 560,
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
@@ -224,12 +262,14 @@ def coverage_chart(df: pd.DataFrame) -> go.Figure:
 
 
 def outcome_bar(metrics: dict, year: Optional[int]) -> go.Figure:
+    cohort = metrics.get("cohort")
     labels = [
         "Treatment success",
         "Died",
         "Treatment failed",
         "Lost to follow-up",
         "Not evaluated",
+        "Residual / unclassified",
     ]
     values = [
         metrics.get("success"),
@@ -237,30 +277,63 @@ def outcome_bar(metrics: dict, year: Optional[int]) -> go.Figure:
         metrics.get("failed"),
         metrics.get("lost"),
         metrics.get("not_evaluated"),
+        metrics.get("other_or_unclassified"),
     ]
-    clean = [(l, v) for l, v in zip(labels, values) if v is not None]
-    labels = [x[0] for x in clean]
-    values = [x[1] for x in clean]
+    colors = [GREEN, ORANGE, RED, AMBER, GREY, GREY_LIGHT]
+    clean = [
+        (label, float(value), color)
+        for label, value, color in zip(labels, values, colors)
+        if value is not None and float(value) > 0
+    ]
+    labels = [item[0] for item in clean]
+    values = [item[1] for item in clean]
+    colors = [item[2] for item in clean]
+    percentages = [
+        100 * value / cohort if cohort not in (None, 0) else None
+        for value in values
+    ]
+    text = [
+        f"{value:,.0f} · {percentage:.1f}%"
+        if percentage is not None
+        else f"{value:,.0f}"
+        for value, percentage in zip(values, percentages)
+    ]
+    text_positions = [
+        "inside" if percentage is not None and percentage >= 20 else "outside"
+        for percentage in percentages
+    ]
+    text_colors = [
+        "white" if position == "inside" else INK
+        for position in text_positions
+    ]
 
     fig = go.Figure(
         go.Bar(
             x=values,
             y=labels,
             orientation="h",
-            marker_color=[GREEN, ORANGE, RED, AMBER, GREY][: len(values)],
-            text=[f"{v:,.0f}" for v in values],
-            textposition="outside",
-            hovertemplate="%{y}<br>%{x:,.0f}<extra></extra>",
+            marker_color=colors,
+            text=text,
+            textposition=text_positions,
+            textfont=dict(color=text_colors),
+            insidetextanchor="end",
+            cliponaxis=False,
+            customdata=percentages,
+            hovertemplate=(
+                "%{y}<br><b>%{x:,.0f}</b>"
+                "<br>%{customdata:.1f}% of cohort<extra></extra>"
+            ),
         )
     )
     fig.update_layout(
         title=f"Treatment outcomes{f' · cohort {year}' if year else ''}",
-        margin=dict(l=15, r=60, t=65, b=20),
-        height=390,
+        margin=dict(l=128, r=106, t=65, b=28),
+        height=420,
         paper_bgcolor="white",
         plot_bgcolor="white",
-        xaxis=dict(title="People", gridcolor="#E8ECF2"),
+        xaxis=dict(title="People", gridcolor="#E8ECF2", rangemode="tozero"),
         yaxis=dict(title=None, autorange="reversed"),
-        font=dict(color=INK),
+        font=dict(size=12, color=INK),
+        showlegend=False,
     )
     return fig

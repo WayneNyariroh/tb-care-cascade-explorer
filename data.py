@@ -285,6 +285,7 @@ def build_country_year_table(
                 "failed": om.get("failed"),
                 "lost_to_follow_up": om.get("lost"),
                 "not_evaluated": om.get("not_evaluated"),
+                "other_or_unclassified": om.get("other_or_unclassified"),
             }
         )
 
