@@ -19,7 +19,24 @@ The project pulls the WHO Global TB Database at runtime.
 - **Historical trends**
   - estimated incidence vs notifications
   - notifications as a share of estimated incidence
+  - treatment-outcome composition by cohort year
+  - estimated TB mortality among HIV-negative people, with a pointer to the
+    TB/HIV mortality series
   - downloadable country-year analytical table
+
+- **TB/HIV trends**
+  - WHO-estimated TB incidence among people living with HIV, with its
+    uncertainty range
+  - HIV testing coverage and HIV positivity among notified TB cases
+  - TB/HIV treatment-outcome composition by cohort enrollment year
+  - WHO-estimated TB mortality among people living with HIV, kept separate
+    from deaths recorded in a TB/HIV treatment cohort
+
+- **Who is notified?**
+  - age and sex composition of reported new and relapse TB notifications
+  - child (0–14) share of notifications
+  - adult male-to-female notification ratio
+  - age/sex reporting coverage, so incomplete classifications are visible
 
 - **Treatment outcomes**
   - outcome distribution for the latest compatible cohort year
@@ -71,6 +88,9 @@ shown by the app can therefore change after a refresh.
 | `e_inc_num_lo` | Lower uncertainty bound, when available |
 | `e_inc_num_hi` | Upper uncertainty bound, when available |
 | `e_inc_100k` | Estimated incidence rate per 100,000 |
+| `e_inc_tbhiv_num` | Estimated incident TB among people living with HIV |
+| `e_mort_num` | Estimated TB mortality among HIV-negative people |
+| `e_mort_tbhiv_num` | Estimated TB mortality among people living with HIV |
 | `e_pop_num` | Estimated population |
 | `c_cdr` | WHO case detection / diagnosis-treatment coverage measure, when present |
 
@@ -79,6 +99,20 @@ shown by the app can therefore change after a refresh.
 The application first looks for `c_newinc`, WHO's total new and relapse
 notification count. Compatibility aliases are included in case export labels
 change.
+
+The TB/HIV view uses `newrel_hivtest` and `newrel_hivpos` to
+calculate HIV testing coverage among notified TB cases and HIV positivity among
+those tested. The current Kenya series does not provide a complete comparable
+ART measure for the displayed period, so the app does not show ART coverage.
+
+The age-and-sex notification profile uses:
+
+```text
+newrel_m014       boys aged 0–14
+newrel_f014       girls aged 0–14
+newrel_m15plus    men aged 15 and older
+newrel_f15plus    women aged 15 and older
+```
 
 ### Treatment outcomes
 
@@ -94,6 +128,16 @@ newrel_neval
 ```
 
 Compatibility aliases are included for common prefixed variants.
+
+For TB/HIV cohorts, the application uses:
+
+```text
+tbhiv_coh
+tbhiv_succ
+tbhiv_died
+tbhiv_fail
+tbhiv_lost
+```
 
 ## Interpretation
 
@@ -121,6 +165,15 @@ The notification-to-cohort difference reconciles two aggregate definitions and
 must not be interpreted as a count of people who were not treated. The residual
 outcome is calculated as the treatment cohort minus the outcome categories
 separately reported in the WHO export.
+
+Population mortality is not a treatment outcome. Historical Trends presents
+WHO-estimated TB mortality among HIV-negative people; TB/HIV Trends presents
+WHO-estimated TB mortality among people living with HIV. Neither series should
+be read as deaths recorded in the corresponding treatment cohort.
+
+The age-and-sex tab describes notified case mix only. It should not be used to
+infer age- or sex-specific TB incidence, risk, diagnostic access, or treatment
+quality without appropriate population denominators and more granular data.
 
 ## Run locally
 
@@ -186,10 +239,3 @@ This separation makes it easier to replace WHO CSV retrieval later with:
 - a materialized analytical warehouse
 
 without rewriting the visualization layer.
-
-## Next extensions
-
-A second data layer could introduce Kenya county-level notifications and
-treatment outcomes, if an authoritative public dataset or approved programme
-extract is available. The national WHO series should remain separate from any
-subnational source so definitions and reporting periods can be audited.

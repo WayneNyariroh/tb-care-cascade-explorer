@@ -165,6 +165,15 @@ def incidence_metrics(row: Optional[pd.Series]) -> dict:
         "incidence_lo": numeric_value(row, ["e_inc_num_lo"]),
         "incidence_hi": numeric_value(row, ["e_inc_num_hi"]),
         "incidence_rate": numeric_value(row, ["e_inc_100k"]),
+        "tb_mortality": numeric_value(row, ["e_mort_num"]),
+        "tb_mortality_lo": numeric_value(row, ["e_mort_num_lo"]),
+        "tb_mortality_hi": numeric_value(row, ["e_mort_num_hi"]),
+        "tbhiv_incidence": numeric_value(row, ["e_inc_tbhiv_num"]),
+        "tbhiv_incidence_lo": numeric_value(row, ["e_inc_tbhiv_num_lo"]),
+        "tbhiv_incidence_hi": numeric_value(row, ["e_inc_tbhiv_num_hi"]),
+        "tbhiv_mortality": numeric_value(row, ["e_mort_tbhiv_num"]),
+        "tbhiv_mortality_lo": numeric_value(row, ["e_mort_tbhiv_num_lo"]),
+        "tbhiv_mortality_hi": numeric_value(row, ["e_mort_tbhiv_num_hi"]),
         "population": numeric_value(row, ["e_pop_num"]),
         "cdr": numeric_value(row, ["c_cdr"]),
     }
@@ -192,6 +201,11 @@ def notification_metrics(row: Optional[pd.Series]) -> dict:
         "hiv_positive": numeric_value(
             row, ["newrel_hivpos", "c_newrel_hivpos"]
         ),
+        "hiv_tested": numeric_value(row, ["newrel_hivtest"]),
+        "boys_0_14": numeric_value(row, ["newrel_m014"]),
+        "girls_0_14": numeric_value(row, ["newrel_f014"]),
+        "men_15_plus": numeric_value(row, ["newrel_m15plus"]),
+        "women_15_plus": numeric_value(row, ["newrel_f15plus"]),
     }
 
 
@@ -233,6 +247,29 @@ def outcome_metrics(row: Optional[pd.Series]) -> dict:
     }
 
 
+def tbhiv_outcome_metrics(row: Optional[pd.Series]) -> dict:
+    """Return WHO treatment outcomes for the TB/HIV cohort."""
+    if row is None:
+        return {}
+
+    cohort = numeric_value(row, ["tbhiv_coh"])
+    success = numeric_value(row, ["tbhiv_succ"])
+    died = numeric_value(row, ["tbhiv_died"])
+    failed = numeric_value(row, ["tbhiv_fail"])
+    lost = numeric_value(row, ["tbhiv_lost"])
+    known = [v for v in [success, died, failed, lost] if v is not None]
+    residual = max(cohort - sum(known), 0) if cohort is not None and known else None
+
+    return {
+        "cohort": cohort,
+        "success": success,
+        "died": died,
+        "failed": failed,
+        "lost": lost,
+        "other_or_unclassified": residual,
+    }
+
+
 def build_country_year_table(
     estimates: pd.DataFrame,
     notifications: pd.DataFrame,
@@ -254,6 +291,17 @@ def build_country_year_table(
         im = incidence_metrics(erow)
         nm = notification_metrics(nrow)
         om = outcome_metrics(orow)
+        tbhiv_om = tbhiv_outcome_metrics(orow)
+        age_sex_values = [
+            nm.get("boys_0_14"), nm.get("girls_0_14"),
+            nm.get("men_15_plus"), nm.get("women_15_plus"),
+        ]
+        age_sex_total = sum(age_sex_values) if all(value is not None for value in age_sex_values) else None
+        children_notified = (
+            nm.get("boys_0_14") + nm.get("girls_0_14")
+            if nm.get("boys_0_14") is not None and nm.get("girls_0_14") is not None
+            else None
+        )
 
         incidence = im.get("incidence")
         notified = nm.get("notified")
@@ -288,7 +336,49 @@ def build_country_year_table(
                 "estimated_incidence": incidence,
                 "estimated_incidence_low": im.get("incidence_lo"),
                 "estimated_incidence_high": im.get("incidence_hi"),
+                "estimated_tb_mortality": im.get("tb_mortality"),
+                "estimated_tb_mortality_low": im.get("tb_mortality_lo"),
+                "estimated_tb_mortality_high": im.get("tb_mortality_hi"),
+                "estimated_tbhiv_incidence": im.get("tbhiv_incidence"),
+                "estimated_tbhiv_incidence_low": im.get("tbhiv_incidence_lo"),
+                "estimated_tbhiv_incidence_high": im.get("tbhiv_incidence_hi"),
+                "estimated_tbhiv_mortality": im.get("tbhiv_mortality"),
+                "estimated_tbhiv_mortality_low": im.get("tbhiv_mortality_lo"),
+                "estimated_tbhiv_mortality_high": im.get("tbhiv_mortality_hi"),
                 "notifications": notified,
+                "hiv_tested": nm.get("hiv_tested"),
+                "hiv_positive_notifications": nm.get("hiv_positive"),
+                "hiv_testing_coverage_pct": (
+                    100 * nm.get("hiv_tested") / notified
+                    if notified not in (None, 0) and nm.get("hiv_tested") is not None
+                    else None
+                ),
+                "hiv_positivity_among_tested_pct": (
+                    100 * nm.get("hiv_positive") / nm.get("hiv_tested")
+                    if nm.get("hiv_tested") not in (None, 0)
+                    and nm.get("hiv_positive") is not None
+                    else None
+                ),
+                "boys_0_14": nm.get("boys_0_14"),
+                "girls_0_14": nm.get("girls_0_14"),
+                "men_15_plus": nm.get("men_15_plus"),
+                "women_15_plus": nm.get("women_15_plus"),
+                "age_sex_reported_total": age_sex_total,
+                "age_sex_reporting_coverage_pct": (
+                    100 * age_sex_total / notified
+                    if age_sex_total is not None and notified not in (None, 0)
+                    else None
+                ),
+                "children_notification_share_pct": (
+                    100 * children_notified / age_sex_total
+                    if children_notified is not None and age_sex_total not in (None, 0)
+                    else None
+                ),
+                "adult_male_to_female_ratio": (
+                    nm.get("men_15_plus") / nm.get("women_15_plus")
+                    if nm.get("men_15_plus") is not None and nm.get("women_15_plus") not in (None, 0)
+                    else None
+                ),
                 "notification_gap": gap,
                 "notification_coverage_pct": coverage,
                 "treatment_cohort": cohort,
@@ -301,6 +391,12 @@ def build_country_year_table(
                 "lost_to_follow_up": om.get("lost"),
                 "not_evaluated": om.get("not_evaluated"),
                 "other_or_unclassified": om.get("other_or_unclassified"),
+                "tbhiv_treatment_cohort": tbhiv_om.get("cohort"),
+                "tbhiv_treatment_success": tbhiv_om.get("success"),
+                "tbhiv_died": tbhiv_om.get("died"),
+                "tbhiv_failed": tbhiv_om.get("failed"),
+                "tbhiv_lost_to_follow_up": tbhiv_om.get("lost"),
+                "tbhiv_other_or_unclassified": tbhiv_om.get("other_or_unclassified"),
             }
         )
 

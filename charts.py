@@ -360,6 +360,250 @@ def cohort_reconciliation_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def mortality_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year", "estimated_tb_mortality"]).copy()
+    has_bounds = (
+        {"estimated_tb_mortality_low", "estimated_tb_mortality_high"}
+        <= set(frame.columns)
+        and frame[["estimated_tb_mortality_low", "estimated_tb_mortality_high"]]
+        .notna()
+        .any(axis=None)
+    )
+
+    fig = go.Figure()
+    if has_bounds:
+        fig.add_trace(
+            go.Scatter(
+                x=frame["year"],
+                y=frame["estimated_tb_mortality_low"],
+                mode="lines",
+                line=dict(color="rgba(216,89,0,0)", width=0),
+                showlegend=False,
+                hoverinfo="skip",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=frame["year"],
+                y=frame["estimated_tb_mortality_high"],
+                mode="lines",
+                line=dict(color="rgba(216,89,0,0)", width=0),
+                fill="tonexty",
+                fillcolor="rgba(216,89,0,0.14)",
+                name="WHO uncertainty range",
+                hoverinfo="skip",
+            )
+        )
+
+    bounds = list(
+        zip(
+            frame.get(
+                "estimated_tb_mortality_low",
+                pd.Series(index=frame.index, dtype=float),
+            ),
+            frame.get(
+                "estimated_tb_mortality_high",
+                pd.Series(index=frame.index, dtype=float),
+            ),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=frame["year"],
+            y=frame["estimated_tb_mortality"],
+            mode="lines+markers",
+            name="Estimated TB mortality",
+            line=dict(color=ORANGE, width=3),
+            marker=dict(size=6),
+            customdata=bounds,
+            hovertemplate=(
+                "%{x}<br>Estimated TB mortality: %{y:,.0f}"
+                "<br>WHO range: %{customdata[0]:,.0f}–%{customdata[1]:,.0f}"
+                "<extra></extra>"
+            ),
+        )
+    )
+    fig.update_layout(
+        title="Estimated TB mortality (HIV-negative people)",
+        hovermode="x unified",
+        legend=dict(orientation="h", y=1.08, x=0),
+        margin=dict(l=15, r=15, t=80, b=20),
+        height=400,
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        xaxis=dict(title=None, showgrid=False),
+        yaxis=dict(title="People", gridcolor="#E8ECF2", zeroline=False),
+        font=dict(color=INK),
+    )
+    return fig
+
+
+def tbhiv_burden_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year", "estimated_tbhiv_incidence"]).copy()
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=frame["year"], y=frame["estimated_tbhiv_incidence_low"], mode="lines",
+            line=dict(color="rgba(21,88,214,0)", width=0), showlegend=False, hoverinfo="skip",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=frame["year"], y=frame["estimated_tbhiv_incidence_high"], mode="lines",
+            line=dict(color="rgba(21,88,214,0)", width=0), fill="tonexty",
+            fillcolor="rgba(21,88,214,0.14)", name="WHO uncertainty range", hoverinfo="skip",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=frame["year"], y=frame["estimated_tbhiv_incidence"], mode="lines+markers",
+            name="Estimated TB incidence among people living with HIV",
+            line=dict(color=BLUE, width=3), marker=dict(size=6),
+            customdata=list(zip(frame["estimated_tbhiv_incidence_low"], frame["estimated_tbhiv_incidence_high"])),
+            hovertemplate="%{x}<br>Estimated TB/HIV incidence: %{y:,.0f}<br>WHO range: %{customdata[0]:,.0f}–%{customdata[1]:,.0f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        title="Estimated TB incidence among people living with HIV", hovermode="x unified",
+        legend=dict(orientation="h", y=1.08, x=0), margin=dict(l=15, r=15, t=80, b=20),
+        height=400, paper_bgcolor="white", plot_bgcolor="white",
+        xaxis=dict(title=None, showgrid=False), yaxis=dict(title="People", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
+    )
+    return fig
+
+
+def tbhiv_care_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year"]).copy()
+    fig = go.Figure()
+    for column, label, color, hover in [
+        ("hiv_testing_coverage_pct", "HIV testing coverage among notified TB cases", "#2E7D6E", "HIV testing coverage"),
+        ("hiv_positivity_among_tested_pct", "HIV positivity among tested TB cases", PURPLE, "HIV positivity among tested"),
+    ]:
+        subset = frame.dropna(subset=[column])
+        fig.add_trace(go.Scatter(
+            x=subset["year"], y=subset[column], mode="lines+markers", name=label,
+            line=dict(color=color, width=3), marker=dict(size=6),
+            hovertemplate=f"%{{x}}<br>{hover}: %{{y:.1f}}%<extra></extra>",
+        ))
+    fig.update_layout(
+        title="HIV testing and positivity among notified TB cases", hovermode="x unified",
+        legend=dict(orientation="h", y=1.16, x=0), margin=dict(l=15, r=15, t=105, b=20),
+        height=400, paper_bgcolor="white", plot_bgcolor="white",
+        xaxis=dict(title=None, showgrid=False), yaxis=dict(title="Percent", range=[0, 100], ticksuffix="%", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
+    )
+    return fig
+
+
+def tbhiv_mortality_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year", "estimated_tbhiv_mortality"]).copy()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=frame["year"], y=frame["estimated_tbhiv_mortality_low"], mode="lines", line=dict(color="rgba(104,29,168,0)", width=0), showlegend=False, hoverinfo="skip"))
+    fig.add_trace(go.Scatter(x=frame["year"], y=frame["estimated_tbhiv_mortality_high"], mode="lines", line=dict(color="rgba(104,29,168,0)", width=0), fill="tonexty", fillcolor="rgba(104,29,168,0.14)", name="WHO uncertainty range", hoverinfo="skip"))
+    fig.add_trace(go.Scatter(
+        x=frame["year"], y=frame["estimated_tbhiv_mortality"], mode="lines+markers", name="Estimated TB mortality among people living with HIV",
+        line=dict(color=PURPLE, width=3), marker=dict(size=6), customdata=list(zip(frame["estimated_tbhiv_mortality_low"], frame["estimated_tbhiv_mortality_high"])),
+        hovertemplate="%{x}<br>Estimated TB/HIV mortality: %{y:,.0f}<br>WHO range: %{customdata[0]:,.0f}–%{customdata[1]:,.0f}<extra></extra>",
+    ))
+    fig.update_layout(
+        title="Estimated TB mortality among people living with HIV", hovermode="x unified",
+        legend=dict(orientation="h", y=1.08, x=0), margin=dict(l=15, r=15, t=80, b=20),
+        height=400, paper_bgcolor="white", plot_bgcolor="white",
+        xaxis=dict(title=None, showgrid=False), yaxis=dict(title="People", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
+    )
+    return fig
+
+
+def tbhiv_outcome_composition_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year", "tbhiv_treatment_cohort"]).copy()
+    frame = frame.loc[frame["tbhiv_treatment_cohort"] > 0]
+    categories = [
+        ("Treatment success", "tbhiv_treatment_success", GREEN, ""),
+        ("Died", "tbhiv_died", ORANGE, "/"),
+        ("Lost to follow-up", "tbhiv_lost_to_follow_up", AMBER, "."),
+        ("Treatment failed", "tbhiv_failed", RED, "x"),
+        ("Residual / unclassified", "tbhiv_other_or_unclassified", "#7C8799", "-"),
+    ]
+    fig = go.Figure()
+    for label, column, color, pattern in categories:
+        counts = pd.to_numeric(frame[column], errors="coerce")
+        shares = 100 * counts / frame["tbhiv_treatment_cohort"]
+        fig.add_trace(go.Bar(
+            x=frame["year"], y=shares, name=label,
+            marker=dict(color=color, pattern=dict(shape=pattern, solidity=0.16)),
+            text=[f"{share:.1f}%" if pd.notna(share) and share >= 8 else "" for share in shares], textposition="inside",
+            textfont=dict(color="white" if label == "Treatment success" else INK, size=11),
+            customdata=list(zip(counts, frame["tbhiv_treatment_cohort"])),
+            hovertemplate="%{x}<br>" + label + ": %{customdata[0]:,.0f}<br>%{y:.1f}% of TB/HIV cohort<br>Cohort: %{customdata[1]:,.0f}<extra></extra>",
+        ))
+    fig.update_layout(
+        title="TB/HIV treatment outcome composition by cohort year", barmode="stack", hovermode="closest",
+        legend=dict(orientation="h", y=1.16, x=0, traceorder="normal"), margin=dict(l=15, r=15, t=105, b=20),
+        height=455, paper_bgcolor="white", plot_bgcolor="white", xaxis=dict(title=None, showgrid=False, dtick=1),
+        yaxis=dict(title="Share of TB/HIV treatment cohort", range=[0, 100], ticksuffix="%", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
+    )
+    return fig
+
+
+def age_sex_composition_chart(df: pd.DataFrame) -> go.Figure:
+    columns = ["boys_0_14", "girls_0_14", "men_15_plus", "women_15_plus"]
+    frame = df.dropna(subset=["year", *columns]).copy()
+    frame["age_sex_total"] = frame[columns].sum(axis=1)
+    categories = [
+        ("Boys, 0–14", "boys_0_14", "#2D6CDF"),
+        ("Girls, 0–14", "girls_0_14", "#8B6FC4"),
+        ("Men, 15+", "men_15_plus", "#2E7D6E"),
+        ("Women, 15+", "women_15_plus", "#D1783C"),
+    ]
+    fig = go.Figure()
+    for label, column, color in categories:
+        shares = 100 * frame[column] / frame["age_sex_total"]
+        fig.add_trace(go.Bar(
+            x=frame["year"], y=shares, name=label, marker=dict(color=color),
+            text=[f"{share:.0f}%" if share >= 12 else "" for share in shares],
+            textposition="inside", textfont=dict(color="white", size=11),
+            customdata=list(zip(frame[column], frame["age_sex_total"])),
+            hovertemplate="%{x}<br>" + label + ": %{customdata[0]:,.0f}<br>%{y:.1f}% of age/sex-reported notifications<br>Reported groups: %{customdata[1]:,.0f}<extra></extra>",
+        ))
+    fig.update_layout(
+        title="Age and sex composition of notified TB cases", barmode="stack", hovermode="closest",
+        legend=dict(orientation="h", y=1.16, x=0), margin=dict(l=15, r=15, t=105, b=20),
+        height=455, paper_bgcolor="white", plot_bgcolor="white", xaxis=dict(title=None, showgrid=False, dtick=1),
+        yaxis=dict(title="Share of age/sex-reported notifications", range=[0, 100], ticksuffix="%", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
+    )
+    return fig
+
+
+def child_share_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year", "children_notification_share_pct"]).copy()
+    fig = go.Figure(go.Scatter(
+        x=frame["year"], y=frame["children_notification_share_pct"], mode="lines+markers",
+        line=dict(color="#2D6CDF", width=3), marker=dict(size=6), fill="tozeroy", fillcolor="rgba(45,108,223,0.10)",
+        hovertemplate="%{x}<br>Children aged 0–14: %{y:.1f}% of notified cases<extra></extra>",
+    ))
+    fig.update_layout(
+        title="Children aged 0–14 among notified TB cases", margin=dict(l=15, r=15, t=65, b=20), height=360,
+        paper_bgcolor="white", plot_bgcolor="white", xaxis=dict(title=None, showgrid=False),
+        yaxis=dict(title="Percent", ticksuffix="%", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK), showlegend=False,
+    )
+    return fig
+
+
+def adult_sex_ratio_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year", "adult_male_to_female_ratio"]).copy()
+    fig = go.Figure(go.Scatter(
+        x=frame["year"], y=frame["adult_male_to_female_ratio"], mode="lines+markers",
+        line=dict(color="#2E7D6E", width=3), marker=dict(size=6), fill="tozeroy", fillcolor="rgba(46,125,110,0.10)",
+        hovertemplate="%{x}<br>Adult male-to-female notification ratio: %{y:.2f}<extra></extra>",
+    ))
+    fig.add_hline(y=1, line_dash="dot", line_color="#8A94A6", annotation_text="Equal reported counts", annotation_position="bottom right")
+    fig.update_layout(
+        title="Adult male-to-female notification ratio", margin=dict(l=15, r=15, t=65, b=20), height=360,
+        paper_bgcolor="white", plot_bgcolor="white", xaxis=dict(title=None, showgrid=False),
+        yaxis=dict(title="Ratio", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK), showlegend=False,
+    )
+    return fig
+
+
 def outcome_composition_chart(df: pd.DataFrame) -> go.Figure:
     frame = df.dropna(subset=["year", "treatment_cohort"]).copy()
     frame = frame.loc[frame["treatment_cohort"] > 0]

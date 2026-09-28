@@ -9,8 +9,16 @@ from charts import (
     cascade_sankey,
     cohort_reconciliation_chart,
     coverage_chart,
+    mortality_chart,
     outcome_bar,
     outcome_composition_chart,
+    tbhiv_burden_chart,
+    tbhiv_care_chart,
+    tbhiv_mortality_chart,
+    tbhiv_outcome_composition_chart,
+    adult_sex_ratio_chart,
+    age_sex_composition_chart,
+    child_share_chart,
     trend_chart,
 )
 from data import (
@@ -270,7 +278,7 @@ treatment_success_pct = (
 
 if country != "Kenya":
     st.info(
-        "The app is branded around Kenya, but the WHO data controls allow country comparison."
+        "The app is branded around Kenya, but the data controls allow selection of east african countries."
     )
 
 c1, c2, c3, c4 = st.columns(4)
@@ -301,12 +309,15 @@ with c4:
         ),
     )
 
-tabs = st.tabs(
-    ["Cascade", "Trends", "Outcomes", "Data notes"]
+history = build_country_year_table(
+    datasets["estimates"], datasets["notifications"], datasets["outcomes"], country
 )
+history = history.loc[history["year"].between(2015, current_year)].copy()
+
+tabs = st.tabs(["Cascade", "Trends", "TB/HIV", "Who is notified?", "Outcomes", "Data notes"])
 
 with tabs[0]:
-    st.markdown(f"## {selected_year} TB care cascade — cohort aligned")
+    st.markdown(f"## {selected_year} TB care cascade: cohort aligned")
     st.caption(
         f"{country}. Incidence and notification describe calendar year {selected_year}. "
         f"Treatment outcomes relate to people enrolled in the {selected_year} cohort "
@@ -411,7 +422,7 @@ with tabs[0]:
     st.markdown(
             f"""
             <div class="interpretation">
-              <div class="interpretation-title">What this view says</div>
+              <div class="interpretation-title">How to read this cascade</div>
               <p>
                 WHO estimates <b>{fmt_int(incidence)}</b> people developed TB in
                 {country} in {selected_year}, while <b>{fmt_int(notified)}</b>
@@ -420,7 +431,7 @@ with tabs[0]:
                 It should not be interpreted as a direct count of undiagnosed people.
                 Of the notifications, <b>{fmt_int(cohort)}</b> are represented in the
                 new-and-recurrent outcome cohort. The <b>{fmt_int(reconciliation_value)}</b>
-                difference is an aggregate reconciliation item—not evidence that those
+                difference reconciles aggregate definitions. It is not evidence that those
                 people were untreated. Only the outcome cohort feeds the treatment outcomes.
               </p>
             </div>
@@ -429,19 +440,10 @@ with tabs[0]:
         )
 
 with tabs[1]:
-    history = build_country_year_table(
-        datasets["estimates"],
-        datasets["notifications"],
-        datasets["outcomes"],
-        country,
-    )
-    history = history.loc[
-        history["year"].between(2015, current_year)
-    ].copy()
     st.markdown("## Historical trends")
     st.caption(
-        "WHO re-estimates historical TB burden when methods or evidence change. "
-        "Use the latest time series as a coherent series rather than mixing releases. "
+        "WHO may revise earlier estimates when methods or evidence change. "
+        "Compare years from the same current WHO release. "
         f"Burden and notification data extend to {latest_reporting_year or 'the latest available year'}; "
         f"the latest complete treatment-outcome cohort is {latest_complete_cohort_year}."
     )
@@ -493,11 +495,36 @@ with tabs[1]:
         key="outcome_composition_chart",
     )
 
+    trend_section_header(
+        "04",
+        "Population mortality",
+        "A WHO modelled estimate of TB deaths among HIV-negative people. This is a "
+        "population-burden measure, not deaths recorded in the treatment cohort.",
+    )
+    st.plotly_chart(
+        mortality_chart(history),
+        width="stretch",
+        config={"displayModeBar": False},
+        key="mortality_chart",
+    )
+    st.markdown(
+        """
+        <div class="related-view-note">
+          <b>TB/HIV mortality</b> is shown separately in the <b>TB/HIV</b> tab,
+          where it can be interpreted alongside HIV testing and TB/HIV cohort outcomes.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     export_cols = [
         "year",
         "estimated_incidence",
         "estimated_incidence_low",
         "estimated_incidence_high",
+        "estimated_tb_mortality",
+        "estimated_tb_mortality_low",
+        "estimated_tb_mortality_high",
         "notifications",
         "notification_gap",
         "notification_coverage_pct",
@@ -521,6 +548,73 @@ with tabs[1]:
     )
 
 with tabs[2]:
+    st.markdown("## TB/HIV trends")
+    st.caption(
+        "A separate view of TB burden among people living with HIV, HIV testing among notified TB cases, "
+        "and TB/HIV treatment cohorts. Population estimates and cohort outcomes have different denominators."
+    )
+    latest_tbhiv = history.dropna(subset=["estimated_tbhiv_incidence", "hiv_testing_coverage_pct"])
+    latest_tbhiv_row = latest_tbhiv.sort_values("year").iloc[-1] if not latest_tbhiv.empty else None
+    latest_tbhiv_outcomes = history.dropna(subset=["tbhiv_treatment_cohort"]).sort_values("year")
+    latest_tbhiv_outcome_row = latest_tbhiv_outcomes.iloc[-1] if not latest_tbhiv_outcomes.empty else None
+
+    tc1, tc2, tc3, tc4 = st.columns(4)
+    with tc1:
+        metric_card("Estimated TB/HIV incidence", fmt_int(latest_tbhiv_row["estimated_tbhiv_incidence"]) if latest_tbhiv_row is not None else "N/A", f"WHO estimate · {int(latest_tbhiv_row['year'])}" if latest_tbhiv_row is not None else "Not available")
+    with tc2:
+        metric_card("HIV testing coverage", fmt_pct(latest_tbhiv_row["hiv_testing_coverage_pct"]) if latest_tbhiv_row is not None else "N/A", f"Among notified TB cases · {int(latest_tbhiv_row['year'])}" if latest_tbhiv_row is not None else "Not available")
+    with tc3:
+        metric_card("HIV-positive TB notifications", fmt_int(latest_tbhiv_row["hiv_positive_notifications"]) if latest_tbhiv_row is not None else "N/A", f"Reported · {int(latest_tbhiv_row['year'])}" if latest_tbhiv_row is not None else "Not available")
+    with tc4:
+        latest_success_pct = (100 * latest_tbhiv_outcome_row["tbhiv_treatment_success"] / latest_tbhiv_outcome_row["tbhiv_treatment_cohort"] if latest_tbhiv_outcome_row is not None and latest_tbhiv_outcome_row["tbhiv_treatment_cohort"] else None)
+        metric_card("TB/HIV treatment success", fmt_pct(latest_success_pct), f"Treatment cohort · {int(latest_tbhiv_outcome_row['year'])}" if latest_tbhiv_outcome_row is not None else "Not available")
+
+    trend_section_header("01", "TB/HIV burden and HIV testing", "The burden estimate is modelled for people living with HIV. Testing and HIV-positive notifications are reported among notified TB cases.")
+    hiv_left, hiv_right = st.columns(2, gap="medium")
+    with hiv_left:
+        st.plotly_chart(tbhiv_burden_chart(history), width="stretch", config={"displayModeBar": False}, key="tbhiv_burden_chart")
+    with hiv_right:
+        st.plotly_chart(tbhiv_care_chart(history), width="stretch", config={"displayModeBar": False}, key="tbhiv_care_chart")
+
+    trend_section_header("02", "TB/HIV treatment outcomes", "Each bar is a TB/HIV treatment cohort enrollment year. These outcomes were observed after enrollment and are not population mortality estimates.")
+    st.plotly_chart(tbhiv_outcome_composition_chart(history), width="stretch", config={"displayModeBar": False}, key="tbhiv_outcome_composition_chart")
+
+    trend_section_header("03", "Population mortality", "WHO's modelled estimate of TB deaths among people living with HIV. It is separate from deaths recorded within a TB/HIV treatment cohort.")
+    st.plotly_chart(tbhiv_mortality_chart(history), width="stretch", config={"displayModeBar": False}, key="tbhiv_mortality_chart")
+
+with tabs[3]:
+    st.markdown("## Who is notified?")
+    st.caption(
+        "The age and sex profile of reported new and relapse TB notifications. This is not age- or sex-specific incidence, risk, or access-to-care measurement."
+    )
+    age_sex_history = history.dropna(subset=["age_sex_reported_total"]).sort_values("year")
+    latest_age_sex = age_sex_history.iloc[-1] if not age_sex_history.empty else None
+    profile_year = int(latest_age_sex["year"]) if latest_age_sex is not None else None
+    children_share = latest_age_sex["children_notification_share_pct"] if latest_age_sex is not None else None
+    adult_ratio = latest_age_sex["adult_male_to_female_ratio"] if latest_age_sex is not None else None
+    reporting_coverage = latest_age_sex["age_sex_reporting_coverage_pct"] if latest_age_sex is not None else None
+
+    ac1, ac2, ac3, ac4 = st.columns(4)
+    with ac1:
+        metric_card("Notified TB cases", fmt_int(latest_age_sex["notifications"]) if latest_age_sex is not None else "N/A", f"Reported · {profile_year}" if profile_year else "Not available")
+    with ac2:
+        metric_card("Children aged 0–14", fmt_pct(children_share), f"Of age/sex-reported notifications · {profile_year}" if profile_year else "Not available")
+    with ac3:
+        metric_card("Adult male:female ratio", f"{adult_ratio:.2f}" if adult_ratio is not None and not pd.isna(adult_ratio) else "N/A", f"Men 15+ ÷ women 15+ · {profile_year}" if profile_year else "Not available")
+    with ac4:
+        metric_card("Age/sex reporting coverage", fmt_pct(reporting_coverage), f"Four reported groups ÷ notifications · {profile_year}" if profile_year else "Not available")
+
+    trend_section_header("01", "Notification profile over time", "Each bar shows the age and sex mix of notifications with a reported classification. Shares describe notifications, not population burden.")
+    st.plotly_chart(age_sex_composition_chart(history), width="stretch", config={"displayModeBar": False}, key="age_sex_composition_chart")
+
+    trend_section_header("02", "Two signals to follow", "Child share describes the proportion of notifications aged 0–14. The adult ratio compares reported notifications among men and women aged 15 and older.")
+    age_left, age_right = st.columns(2, gap="medium")
+    with age_left:
+        st.plotly_chart(child_share_chart(history), width="stretch", config={"displayModeBar": False}, key="child_share_chart")
+    with age_right:
+        st.plotly_chart(adult_sex_ratio_chart(history), width="stretch", config={"displayModeBar": False}, key="adult_sex_ratio_chart")
+
+with tabs[4]:
     st.markdown("## Treatment outcomes")
     if cohort is None:
         st.info("No compatible new-and-relapse treatment cohort was available.")
@@ -552,8 +646,8 @@ with tabs[2]:
                 unsafe_allow_html=True,
             )
 
-with tabs[3]:
-    st.markdown("## Executive summary")
+with tabs[5]:
+    st.markdown("## Definitions and data source")
     st.write(
         f"""
         The {country} TB Care Cascade Explorer examines how estimated tuberculosis
@@ -580,6 +674,18 @@ with tabs[3]:
           cases. It is an analytical gap, not a direct enumeration of undiagnosed people.
         - **Treatment success** uses the WHO new-and-relapse treatment cohort where
           available.
+        - **Estimated TB mortality** is WHO's modelled estimate of deaths due to TB
+          among HIV-negative people. It is a population-burden measure and should not
+          be compared as though it were the same as deaths recorded in a treatment cohort.
+        - **TB/HIV mortality** is WHO's modelled estimate of deaths due to TB among
+          people living with HIV. It is presented in the TB/HIV tab and is also distinct
+          from deaths recorded in a TB/HIV treatment cohort.
+        - **HIV testing coverage** is the reported number of notified TB cases tested
+          for HIV divided by notified TB cases. **HIV positivity among tested** uses the
+          reported HIV-positive TB notifications divided by those tested.
+        - **Age and sex profile** uses four reported notification groups: boys and girls
+          aged 0–14, and men and women aged 15 and older. It describes the case mix of
+          notifications, not age- or sex-specific incidence or risk.
         - **Notification–cohort reconciliation** is the difference between the notification
           aggregate and the outcome-cohort aggregate. It is not labelled as untreated.
         - **Residual / not separately classified** is calculated as the outcome cohort minus
