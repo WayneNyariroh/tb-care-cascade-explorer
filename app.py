@@ -5,7 +5,14 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 
-from charts import cascade_sankey, coverage_chart, outcome_bar, trend_chart
+from charts import (
+    cascade_sankey,
+    cohort_reconciliation_chart,
+    coverage_chart,
+    outcome_bar,
+    outcome_composition_chart,
+    trend_chart,
+)
 from data import (
     WHO_DATA_PAGE,
     DataLoadError,
@@ -53,6 +60,21 @@ def metric_card(label: str, value: str, note: str = "") -> None:
           <div class="metric-label">{label}</div>
           <div class="metric-value">{value}</div>
           <div class="metric-note">{note}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def trend_section_header(number: str, title: str, description: str) -> None:
+    st.markdown(
+        f"""
+        <div class="trend-section-header">
+          <div class="trend-section-number">{number}</div>
+          <div>
+            <div class="trend-section-title">{title}</div>
+            <div class="trend-section-copy">{description}</div>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -412,6 +434,9 @@ with tabs[1]:
         datasets["outcomes"],
         country,
     )
+    history = history.loc[
+        history["year"].between(2015, current_year)
+    ].copy()
     st.markdown("## Historical trends")
     st.caption(
         "WHO re-estimates historical TB burden when methods or evidence change. "
@@ -419,26 +444,65 @@ with tabs[1]:
         f"Burden and notification data extend to {latest_reporting_year or 'the latest available year'}; "
         f"the latest complete treatment-outcome cohort is {latest_complete_cohort_year}."
     )
+    trend_section_header(
+        "01",
+        "Burden and detection",
+        "Compare reported notifications with WHO's modelled incidence estimate and "
+        "its uncertainty range.",
+    )
     st.plotly_chart(
         trend_chart(history),
         width="stretch",
         config={"displayModeBar": False},
         key="trend_chart",
     )
+
+    trend_section_header(
+        "02",
+        "Coverage and cohort alignment",
+        "Coverage uses the incidence point estimate. Reconciliation compares the "
+        "same-year outcome cohort with notifications; it is not patient attrition.",
+    )
+    trend_left, trend_right = st.columns(2, gap="medium")
+    with trend_left:
+        st.plotly_chart(
+            coverage_chart(history),
+            width="stretch",
+            config={"displayModeBar": False},
+            key="coverage_chart",
+        )
+    with trend_right:
+        st.plotly_chart(
+            cohort_reconciliation_chart(history),
+            width="stretch",
+            config={"displayModeBar": False},
+            key="cohort_reconciliation_chart",
+        )
+
+    trend_section_header(
+        "03",
+        "Treatment outcomes over time",
+        "Each bar is a treatment cohort enrollment year and sums to the reported "
+        "cohort; outcomes were observed after enrollment.",
+    )
     st.plotly_chart(
-        coverage_chart(history),
+        outcome_composition_chart(history),
         width="stretch",
         config={"displayModeBar": False},
-        key="coverage_chart",
+        key="outcome_composition_chart",
     )
 
     export_cols = [
         "year",
         "estimated_incidence",
+        "estimated_incidence_low",
+        "estimated_incidence_high",
         "notifications",
         "notification_gap",
         "notification_coverage_pct",
         "treatment_cohort",
+        "cohort_notification_difference",
+        "cohort_notification_difference_pct",
         "treatment_success",
         "treatment_success_pct",
         "died",

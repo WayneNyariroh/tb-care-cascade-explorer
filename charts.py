@@ -200,11 +200,56 @@ def cascade_sankey(
 
 
 def trend_chart(df: pd.DataFrame) -> go.Figure:
-    frame = df.dropna(
-        subset=["year", "estimated_incidence", "notifications"], how="all"
-    ).copy()
+    frame = df.dropna(subset=["year"]).copy()
+    frame = frame.dropna(
+        subset=["estimated_incidence", "notifications"], how="all"
+    )
 
     fig = go.Figure()
+    has_bounds = (
+        {"estimated_incidence_low", "estimated_incidence_high"}
+        <= set(frame.columns)
+        and frame[["estimated_incidence_low", "estimated_incidence_high"]]
+        .notna()
+        .any(axis=None)
+    )
+    if has_bounds:
+        fig.add_trace(
+            go.Scatter(
+                x=frame["year"],
+                y=frame["estimated_incidence_low"],
+                mode="lines",
+                line=dict(color="rgba(21,88,214,0)", width=0),
+                showlegend=False,
+                hoverinfo="skip",
+                name="Incidence lower bound",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=frame["year"],
+                y=frame["estimated_incidence_high"],
+                mode="lines",
+                line=dict(color="rgba(21,88,214,0)", width=0),
+                fill="tonexty",
+                fillcolor="rgba(21,88,214,0.14)",
+                name="WHO uncertainty range",
+                hoverinfo="skip",
+            )
+        )
+
+    bounds = list(
+        zip(
+            frame.get(
+                "estimated_incidence_low",
+                pd.Series(index=frame.index, dtype=float),
+            ),
+            frame.get(
+                "estimated_incidence_high",
+                pd.Series(index=frame.index, dtype=float),
+            ),
+        )
+    )
     fig.add_trace(
         go.Scatter(
             x=frame["year"],
@@ -213,7 +258,12 @@ def trend_chart(df: pd.DataFrame) -> go.Figure:
             name="Estimated incidence",
             line=dict(color=BLUE, width=3),
             marker=dict(size=6),
-            hovertemplate="%{x}<br>Estimated incidence: %{y:,.0f}<extra></extra>",
+            customdata=bounds,
+            hovertemplate=(
+                "%{x}<br>Estimated incidence: %{y:,.0f}"
+                "<br>WHO range: %{customdata[0]:,.0f}–%{customdata[1]:,.0f}"
+                "<extra></extra>"
+            ),
         )
     )
     fig.add_trace(
@@ -237,6 +287,142 @@ def trend_chart(df: pd.DataFrame) -> go.Figure:
         plot_bgcolor="white",
         xaxis=dict(title=None, showgrid=False),
         yaxis=dict(title="People", gridcolor="#E8ECF2", zeroline=False),
+        font=dict(color=INK),
+    )
+    return fig
+
+
+def cohort_reconciliation_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(
+        subset=["year", "notifications", "treatment_cohort"]
+    ).copy()
+    if "cohort_notification_difference" not in frame.columns:
+        frame["cohort_notification_difference"] = (
+            frame["treatment_cohort"] - frame["notifications"]
+        )
+    if "cohort_notification_difference_pct" not in frame.columns:
+        frame["cohort_notification_difference_pct"] = (
+            100
+            * frame["cohort_notification_difference"]
+            / frame["notifications"].replace(0, pd.NA)
+        )
+
+    differences = frame["cohort_notification_difference"]
+    colors = [
+        PURPLE if value > 0 else "#A9B1BD" if value < 0 else GREY_LIGHT
+        for value in differences
+    ]
+    customdata = list(
+        zip(
+            frame["notifications"],
+            frame["treatment_cohort"],
+            frame["cohort_notification_difference_pct"],
+        )
+    )
+    fig = go.Figure(
+        go.Bar(
+            x=frame["year"],
+            y=differences,
+            marker=dict(color=colors),
+            text=[
+                f"{value:+,.0f}" if value != 0 else "0"
+                for value in differences
+            ],
+            textposition="outside",
+            cliponaxis=False,
+            customdata=customdata,
+            hovertemplate=(
+                "%{x}<br>Notifications: %{customdata[0]:,.0f}"
+                "<br>Outcome cohort: %{customdata[1]:,.0f}"
+                "<br>Difference: %{y:+,.0f}"
+                "<br>Share of notifications: %{customdata[2]:+.1f}%"
+                "<extra></extra>"
+            ),
+        )
+    )
+    fig.update_layout(
+        title="Outcome cohort minus notifications",
+        margin=dict(l=15, r=15, t=65, b=20),
+        height=390,
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        xaxis=dict(title=None, showgrid=False, dtick=1),
+        yaxis=dict(
+            title="People (signed difference)",
+            gridcolor="#E8ECF2",
+            zeroline=True,
+            zerolinecolor="#697386",
+            zerolinewidth=1.5,
+        ),
+        font=dict(color=INK),
+        showlegend=False,
+    )
+    return fig
+
+
+def outcome_composition_chart(df: pd.DataFrame) -> go.Figure:
+    frame = df.dropna(subset=["year", "treatment_cohort"]).copy()
+    frame = frame.loc[frame["treatment_cohort"] > 0]
+    categories = [
+        ("Treatment success", "treatment_success", GREEN, ""),
+        ("Died", "died", ORANGE, "/"),
+        ("Lost to follow-up", "lost_to_follow_up", AMBER, "."),
+        ("Treatment failed", "failed", RED, "x"),
+        ("Not evaluated", "not_evaluated", GREY, "\\"),
+        ("Residual / unclassified", "other_or_unclassified", "#7C8799", "-"),
+    ]
+
+    fig = go.Figure()
+    for label, column, color, pattern in categories:
+        if column not in frame.columns or not frame[column].notna().any():
+            continue
+        counts = pd.to_numeric(frame[column], errors="coerce")
+        shares = 100 * counts / frame["treatment_cohort"]
+        text = [
+            f"{share:.1f}%" if pd.notna(share) and share >= 8 else ""
+            for share in shares
+        ]
+        fig.add_trace(
+            go.Bar(
+                x=frame["year"],
+                y=shares,
+                name=label,
+                marker=dict(
+                    color=color,
+                    pattern=dict(shape=pattern, solidity=0.16),
+                ),
+                text=text,
+                textposition="inside",
+                textfont=dict(
+                    color="white" if label == "Treatment success" else INK,
+                    size=11,
+                ),
+                customdata=list(zip(counts, frame["treatment_cohort"])),
+                hovertemplate=(
+                    "%{x}<br>" + label + ": %{customdata[0]:,.0f}"
+                    "<br>%{y:.1f}% of cohort"
+                    "<br>Cohort: %{customdata[1]:,.0f}<extra></extra>"
+                ),
+            )
+        )
+
+    fig.update_layout(
+        title="Treatment outcome composition by cohort year",
+        barmode="stack",
+        hovermode="closest",
+        legend=dict(orientation="h", y=1.16, x=0, traceorder="normal"),
+        margin=dict(l=15, r=15, t=105, b=20),
+        height=455,
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        xaxis=dict(title=None, showgrid=False, dtick=1),
+        yaxis=dict(
+            title="Share of treatment cohort",
+            range=[0, 100],
+            ticksuffix="%",
+            gridcolor="#E8ECF2",
+            zeroline=False,
+        ),
         font=dict(color=INK),
     )
     return fig

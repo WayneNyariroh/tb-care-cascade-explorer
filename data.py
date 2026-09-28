@@ -270,15 +270,30 @@ def build_country_year_table(
             if cohort not in (None, 0) and success is not None
             else None
         )
+        cohort_notification_difference = (
+            cohort - notified
+            if cohort is not None and notified is not None
+            else None
+        )
+        cohort_notification_difference_pct = (
+            100 * cohort_notification_difference / notified
+            if notified not in (None, 0)
+            and cohort_notification_difference is not None
+            else None
+        )
 
         records.append(
             {
                 "year": year,
                 "estimated_incidence": incidence,
+                "estimated_incidence_low": im.get("incidence_lo"),
+                "estimated_incidence_high": im.get("incidence_hi"),
                 "notifications": notified,
                 "notification_gap": gap,
                 "notification_coverage_pct": coverage,
                 "treatment_cohort": cohort,
+                "cohort_notification_difference": cohort_notification_difference,
+                "cohort_notification_difference_pct": cohort_notification_difference_pct,
                 "treatment_success": success,
                 "treatment_success_pct": tsr,
                 "died": om.get("died"),

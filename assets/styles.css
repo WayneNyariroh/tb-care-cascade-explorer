@@ -108,6 +108,40 @@ h2 {
   margin-top: .65rem;
 }
 
+.trend-section-header {
+  align-items: flex-start;
+  display: flex;
+  gap: .8rem;
+  margin: 1.45rem 0 .65rem;
+  max-width: 920px;
+}
+
+.trend-section-number {
+  color: var(--blue);
+  flex: 0 0 auto;
+  font-size: .68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1.55;
+  padding-top: .1rem;
+}
+
+.trend-section-title {
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 760;
+  letter-spacing: -.015em;
+  line-height: 1.25;
+}
+
+.trend-section-copy {
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.45;
+  margin-top: .18rem;
+}
+
 .detail-table-card {
   height: 100%;
   border: 1px solid var(--line);
@@ -293,6 +327,19 @@ section[data-testid="stSidebar"] {
 
   .metric-card {
     min-height: 126px;
+  }
+
+  .trend-section-header {
+    gap: .6rem;
+    margin: 1.25rem 0 .55rem;
+  }
+
+  .trend-section-title {
+    font-size: .98rem;
+  }
+
+  .trend-section-copy {
+    font-size: .78rem;
   }
 
   div[data-testid="stTab"] div[data-baseweb="tab-list"] {
