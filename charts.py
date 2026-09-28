@@ -64,8 +64,16 @@ def cascade_sankey(
         f"{'Cohort' if compact else 'Outcome cohort'}<br><b>{_fmt(cohort)}</b>",
     ]
     node_colors = [BLUE, "#2E7D6E", "#CBD1D9", PURPLE]
-    node_x = [0.01, 0.31, 0.31, 0.59]
-    node_y = [0.10, 0.04, 0.72 if compact else 0.68, 0.04]
+    # Keep the first three stages on the same quarter-grid as the external
+    # stage rail. The outcome sink sits across the fourth section so that
+    # the final flow uses the available width without leaving a long tail.
+    node_x = [0.04, 0.30, 0.30, 0.55]
+    node_y = [
+        0.10,
+        0.04,
+        0.72 if compact else 0.68,
+        0.12 if compact else 0.04,
+    ]
     node_customdata = [
         "WHO modelled incidence point estimate",
         "New, recurrent and unknown previous-treatment-history cases reported",
@@ -89,7 +97,7 @@ def cascade_sankey(
             + f"<b>{_fmt(reconciliation)}</b>"
         )
         node_colors.append("#E7E9ED")
-        node_x.append(0.59)
+        node_x.append(0.55)
         node_y.append(0.88 if compact else 0.77)
         node_customdata.append(
             "Aggregate definition and reporting difference; not a treatment outcome"
@@ -108,7 +116,7 @@ def cascade_sankey(
             + f"<b>{_fmt(reconciliation)}</b>"
         )
         node_colors.append("#E7E9ED")
-        node_x.append(0.31)
+        node_x.append(0.30)
         node_y.append(0.88 if compact else 0.77)
         node_customdata.append(
             "Outcome cohort exceeds the notification aggregate; not a treatment outcome"
@@ -138,7 +146,7 @@ def cascade_sankey(
         shown_label = compact_label if compact else label
         labels.append(f"{shown_label}<br><b>{_fmt(value)} · {share:.1f}%</b>")
         node_colors.append(color)
-        node_x.append(0.91)
+        node_x.append(0.91 if compact else 0.96)
         node_y.append(outcome_y[min(index, len(outcome_y) - 1)])
         node_customdata.append(f"{share:.1f}% of the outcome cohort")
         sources.append(3)
@@ -180,9 +188,9 @@ def cascade_sankey(
     fig.update_layout(
         font=dict(size=9 if compact else 11, color=INK),
         margin=(
-            dict(l=12, r=66, t=28, b=24)
+            dict(l=12, r=24, t=28, b=24)
             if compact
-            else dict(l=34, r=152, t=28, b=32)
+            else dict(l=34, r=18, t=28, b=32)
         ),
         height=540 if compact else 560,
         paper_bgcolor="white",
