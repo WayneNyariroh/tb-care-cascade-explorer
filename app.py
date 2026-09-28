@@ -37,7 +37,7 @@ from data import (
 page_icon = "icon/favicon.svg"
 
 st.set_page_config(
-    page_title="Kenya TB Care Cascade Explorer",
+    page_title="TB Care Cascade Explorer",
     page_icon=page_icon,
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -135,7 +135,7 @@ load_css()
 st.markdown(
     """
     <div class="eyebrow">PUBLIC HEALTH ANALYTICS | WAYNE WILLIS OMONDI</div>
-    <h1>Kenya TB Care Cascade Explorer</h1>
+    <h1> TB Care Cascade Explorer</h1>
     <p class="hero-copy">
       Tracking the path from estimated tuberculosis burden to notification,
       treatment and treatment outcomes.
@@ -169,7 +169,7 @@ EAST_AFRICAN_COUNTRIES = [
     "Rwanda",
     "Somalia",
     "South Sudan",
-    "Tanzania",
+    "United Republic of Tanzania",
     "Uganda",
 ]
 
@@ -229,14 +229,14 @@ latest_complete_cohort_year = max(years)
 
 with st.sidebar:
     selected_year = st.selectbox(
-        "Treatment cohort enrollment year",
+        "Treatment cohort enrollment year (affects only the cascade view and top metrics)",
         sorted(years, reverse=True),
         index=0,
     )
     if latest_reporting_year and latest_reporting_year > latest_complete_cohort_year:
         st.caption(
-            f"Burden and notifications extend to {latest_reporting_year}. "
-            f"The latest complete outcome cohort is {latest_complete_cohort_year}."
+            f"Note: Burden and notifications extend to {latest_reporting_year}. "
+            f"But the latest complete outcome cohort is {latest_complete_cohort_year}."
         )
 
 est_row, est_year = row_for_year(country_est, selected_year)
@@ -267,6 +267,7 @@ if cohort is None:
     st.stop()
 
 notification_gap = max(incidence - notified, 0)
+notifications_above_incidence = max(notified - incidence, 0)
 notification_coverage = 100 * notified / incidence if incidence else None
 
 treatment_success_pct = (
@@ -360,6 +361,33 @@ with tabs[0]:
     )
 
     gap_pct = 100 * notification_gap / incidence if incidence else None
+    if notifications_above_incidence > 0:
+        burden_difference_label = "Notifications above incidence point estimate"
+        burden_difference_value = notifications_above_incidence
+        burden_difference_pct = (
+            100 * notifications_above_incidence / incidence if incidence else None
+        )
+        burden_difference_note = (
+            "Reported notifications are higher than the WHO incidence point estimate. "
+            "The neutral branch reconciles the two values; it is not a patient group."
+        )
+        burden_summary = (
+            f"Reported notifications are <b>{fmt_int(notifications_above_incidence)}</b> higher "
+            "than the WHO incidence point estimate. This can occur because the estimate has "
+            "uncertainty and uses a different measurement process from notifications."
+        )
+    else:
+        burden_difference_label = "Estimated notification gap"
+        burden_difference_value = notification_gap
+        burden_difference_pct = gap_pct
+        burden_difference_note = (
+            "The notification gap is an analytical difference, not a direct count of "
+            "undiagnosed people."
+        )
+        burden_summary = (
+            f"The arithmetic difference, <b>{fmt_int(notification_gap)}</b>, is shown as a "
+            "notification gap. It should not be interpreted as a direct count of undiagnosed people."
+        )
     notification_cohort_difference = notified - cohort
     reconciliation_value = abs(notification_cohort_difference)
     reconciliation_pct = 100 * reconciliation_value / notified if notified else None
@@ -399,7 +427,7 @@ with tabs[0]:
                 [
                     ("Estimated incidence", fmt_int(incidence), "100.0%", "Incidence point estimate"),
                     ("Notified cases", fmt_int(notified), fmt_pct(notification_coverage), "Incidence point estimate"),
-                    ("Estimated notification gap", fmt_int(notification_gap), fmt_pct(gap_pct), "Incidence point estimate"),
+                    (burden_difference_label, fmt_int(burden_difference_value), fmt_pct(burden_difference_pct), "Incidence point estimate"),
                 ],
             ),
             (
@@ -412,8 +440,8 @@ with tabs[0]:
             ("Treatment outcomes", outcome_rows),
         ],
         (
-            f"{incidence_range} The notification–cohort difference reconciles two "
-            "aggregate definitions; it is not a treatment outcome. Residual is the "
+            f"{incidence_range} {burden_difference_note} The notification-to-cohort difference "
+            "reconciles two aggregate definitions; it is not a treatment outcome. Residual is the "
             "cohort total minus the outcome categories separately reported in the export."
         ),
     )
@@ -425,9 +453,7 @@ with tabs[0]:
               <p>
                 WHO estimates <b>{fmt_int(incidence)}</b> people developed TB in
                 {country} in {selected_year}, while <b>{fmt_int(notified)}</b>
-                new and relapse cases were notified. The arithmetic difference,
-                <b>{fmt_int(notification_gap)}</b>, is shown as a notification gap.
-                It should not be interpreted as a direct count of undiagnosed people.
+                new and relapse cases were notified. {burden_summary}
                 Of the notifications, <b>{fmt_int(cohort)}</b> are represented in the
                 new-and-recurrent outcome cohort. The <b>{fmt_int(reconciliation_value)}</b>
                 difference reconciles aggregate definitions. It is not evidence that those
@@ -540,7 +566,7 @@ with tabs[1]:
     ]
     downloadable = history.reindex(columns=export_cols).sort_values("year")
     st.download_button(
-        "Download country time series (.csv)",
+        f"Download {country} time series (.csv)",
         downloadable.to_csv(index=False).encode("utf-8"),
         file_name=f"{country.lower().replace(' ', '_')}_tb_cascade_timeseries.csv",
         mime="text/csv",
@@ -642,6 +668,9 @@ with tabs[4]:
           the year in which they enrolled.
         - **Notification gap** is calculated here as estimated incidence minus notified
           cases. It is an analytical gap, not a direct enumeration of undiagnosed people.
+        - **Notifications above incidence point estimate** is used when reported
+          notifications are higher than WHO's incidence point estimate. It is shown as
+          a reconciliation branch, not as a patient group or treatment outcome.
         - **Treatment success** uses the WHO new-and-relapse treatment cohort where
           available.
         - **Estimated TB mortality** is WHO's modelled estimate of deaths due to TB

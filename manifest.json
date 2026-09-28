@@ -2,10 +2,9 @@
   "project": "Kenya TB Care Cascade Explorer",
   "entrypoint": "app.py",
   "data_source": "WHO Global TB Database",
-  "description": "An interactive tool to explore the TB care cascade in Kenya using WHO data",
-  "version": "1.0.0",
+  "description": "An interactive tool to explore the TB care cascade in Kenya (and East Africa) using WHO data",
+  "version": "1.2.0",
   "author": "Wayne Willis Omondi",
-  "license": "MIT",
   "dependencies": {
     "streamlit": "1.63.0",
     "pandas": "3.0.6",

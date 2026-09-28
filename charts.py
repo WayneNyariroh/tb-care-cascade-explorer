@@ -36,6 +36,7 @@ def cascade_sankey(
     notified = max(float(notified or 0), 0)
     cohort = max(float(outcome_metrics.get("cohort") or 0), 0)
     notification_gap = max(incidence - notified, 0)
+    notification_excess = max(notified - incidence, 0)
 
     outcomes = [
         ("Treatment success", "success", GREEN, "rgba(20,108,46,0.34)"),
@@ -60,69 +61,106 @@ def cascade_sankey(
     labels = [
         f"{'Incidence' if compact else 'Estimated incidence'}<br><b>{_fmt(incidence)}</b>",
         f"{'Notified' if compact else 'Notified cases'}<br><b>{_fmt(notified)}</b>",
-        f"{'Est. gap' if compact else 'Estimated notification gap'}<br><b>{_fmt(notification_gap)}</b>",
         f"{'Cohort' if compact else 'Outcome cohort'}<br><b>{_fmt(cohort)}</b>",
     ]
-    node_colors = [BLUE, "#2E7D6E", "#CBD1D9", PURPLE]
-    # Keep the first three stages on the same quarter-grid as the external
-    # stage rail. The outcome sink sits across the fourth section so that
-    # the final flow uses the available width without leaving a long tail.
-    node_x = [0.04, 0.30, 0.30, 0.55]
-    node_y = [
-        0.10,
-        0.04,
-        0.72 if compact else 0.68,
-        0.12 if compact else 0.04,
-    ]
+    node_colors = [BLUE, "#2E7D6E", PURPLE]
+    node_x = [0.04, 0.30, 0.55]
+    node_y = [0.08, 0.08, 0.08]
     node_customdata = [
         "WHO modelled incidence point estimate",
         "New, recurrent and unknown previous-treatment-history cases reported",
-        "Point estimate minus notifications; not a counted outcome",
         "New-and-recurrent cohort included in treatment-outcome reporting",
     ]
 
-    sources = [0, 0]
-    targets = [1, 2]
-    values = [notified, notification_gap]
-    link_colors = ["rgba(46,125,110,0.32)", "rgba(180,187,197,0.28)"]
-    link_customdata = [
-        "Reported notifications",
-        "Estimated notification gap",
-    ]
+    sources: list[int] = []
+    targets: list[int] = []
+    values: list[float] = []
+    link_colors: list[str] = []
+    link_customdata: list[str] = []
+
+    if notification_excess > 0:
+        excess_index = len(labels)
+        labels.append(
+            ("Above est.<br>" if compact else "Notifications above<br>incidence estimate<br>")
+            + f"<b>{_fmt(notification_excess)}</b>"
+        )
+        node_colors.append("#CBD1D9")
+        node_x.append(0.04)
+        node_y.append(0.74 if compact else 0.70)
+        node_customdata.append(
+            "Reported notifications exceed the WHO incidence point estimate; "
+            "a reconciliation item, not a patient group"
+        )
+        sources.extend([0, excess_index])
+        targets.extend([1, 1])
+        values.extend([incidence, notification_excess])
+        link_colors.extend(["rgba(46,125,110,0.32)", "rgba(180,187,197,0.30)"])
+        link_customdata.extend(
+            ["WHO incidence point estimate", "Notifications above incidence point estimate"]
+        )
+    else:
+        sources.append(0)
+        targets.append(1)
+        values.append(notified)
+        link_colors.append("rgba(46,125,110,0.32)")
+        link_customdata.append("Reported notifications")
+        if notification_gap > 0:
+            gap_index = len(labels)
+            labels.append(
+                ("Est. gap<br>" if compact else "Estimated notification gap<br>")
+                + f"<b>{_fmt(notification_gap)}</b>"
+            )
+            node_colors.append("#CBD1D9")
+            node_x.append(0.30)
+            node_y.append(0.72 if compact else 0.68)
+            node_customdata.append(
+                "Incidence point estimate minus notifications; not a counted outcome"
+            )
+            sources.append(0)
+            targets.append(gap_index)
+            values.append(notification_gap)
+            link_colors.append("rgba(180,187,197,0.28)")
+            link_customdata.append("Estimated notification gap")
 
     if notified >= cohort:
         reconciliation = notified - cohort
-        labels.append(
-            ("Recon.<br>" if compact else "Notification–cohort<br>reconciliation<br>")
-            + f"<b>{_fmt(reconciliation)}</b>"
-        )
-        node_colors.append("#E7E9ED")
-        node_x.append(0.55)
-        node_y.append(0.88 if compact else 0.77)
-        node_customdata.append(
-            "Aggregate definition and reporting difference; not a treatment outcome"
-        )
-        sources.extend([1, 1])
-        targets.extend([3, 4])
-        values.extend([cohort, reconciliation])
-        link_colors.extend(["rgba(104,29,168,0.28)", "rgba(190,195,203,0.30)"])
-        link_customdata.extend(
-            ["Included in outcome cohort", "Notification–cohort reconciliation"]
-        )
+        sources.append(1)
+        targets.append(2)
+        values.append(cohort)
+        link_colors.append("rgba(104,29,168,0.28)")
+        link_customdata.append("Included in outcome cohort")
+        if reconciliation > 0:
+            reconciliation_index = len(labels)
+            labels.append(
+                ("Recon.<br>" if compact else "Notification–cohort<br>reconciliation<br>")
+                + f"<b>{_fmt(reconciliation)}</b>"
+            )
+            node_colors.append("#E7E9ED")
+            node_x.append(0.55)
+            node_y.append(0.79 if compact else 0.74)
+            node_customdata.append(
+                "Aggregate definition and reporting difference; not a treatment outcome"
+            )
+            sources.append(1)
+            targets.append(reconciliation_index)
+            values.append(reconciliation)
+            link_colors.append("rgba(190,195,203,0.30)")
+            link_customdata.append("Notification–cohort reconciliation")
     else:
         reconciliation = cohort - notified
+        reconciliation_index = len(labels)
         labels.append(
             ("Recon.<br>" if compact else "Additional cohort<br>reconciliation<br>")
             + f"<b>{_fmt(reconciliation)}</b>"
         )
         node_colors.append("#E7E9ED")
         node_x.append(0.30)
-        node_y.append(0.88 if compact else 0.77)
+        node_y.append(0.79 if compact else 0.74)
         node_customdata.append(
             "Outcome cohort exceeds the notification aggregate; not a treatment outcome"
         )
-        sources.extend([1, 4])
-        targets.extend([3, 3])
+        sources.extend([1, reconciliation_index])
+        targets.extend([2, 2])
         values.extend([notified, reconciliation])
         link_colors.extend(["rgba(104,29,168,0.28)", "rgba(190,195,203,0.30)"])
         link_customdata.extend(
@@ -130,9 +168,9 @@ def cascade_sankey(
         )
 
     outcome_y = (
-        [0.01, 0.56, 0.66, 0.75, 0.81, 0.84]
+        [0.03, 0.53, 0.64, 0.74, 0.82, 0.87]
         if compact
-        else [0.01, 0.48, 0.58, 0.67, 0.74, 0.80]
+        else [0.03, 0.50, 0.61, 0.71, 0.79, 0.84]
     )
     for index, (label, value, color, link_color) in enumerate(outcomes):
         outcome_index = len(labels)
@@ -149,7 +187,7 @@ def cascade_sankey(
         node_x.append(0.91 if compact else 0.96)
         node_y.append(outcome_y[min(index, len(outcome_y) - 1)])
         node_customdata.append(f"{share:.1f}% of the outcome cohort")
-        sources.append(3)
+        sources.append(2)
         targets.append(outcome_index)
         values.append(value)
         link_colors.append(link_color)

@@ -2,7 +2,8 @@
 # Wayne Willis Omondi
 
 An interactive Streamlit application for examining the path from WHO-estimated
-tuberculosis burden to case notification and treatment outcomes.
+tuberculosis burden to case notification and treatment outcomes as well as TB/HIV data and Age & Sex Distribution.
+While the project is centred on Kenya, the sidebar data controls allow putting another East African country into focus.
 
 The project pulls the WHO Global TB Database at runtime.
 
@@ -151,6 +152,11 @@ Estimated incidence is modelled. Notifications are surveillance counts.
 The difference can reflect people who were not diagnosed, people diagnosed but
 not notified, reporting incompleteness, private-sector gaps, and uncertainty in
 the incidence estimate.
+
+When notifications are higher than the WHO incidence point estimate, the app
+does not extend the incidence flow beyond that estimate. It shows the excess as
+a neutral reconciliation branch. That branch is a difference between a reported
+count and a modelled point estimate, not a patient group.
 
 The main selector is the **treatment cohort enrollment year** and includes only
 years for which incidence, notifications and treatment-cohort outcomes are all
