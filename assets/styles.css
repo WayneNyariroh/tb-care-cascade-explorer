@@ -100,14 +100,6 @@ h2 {
   max-width: 1000px;
 }
 
-.outcome-summary {
-  border: 1px solid var(--line);
-  background: white;
-  border-radius: 14px;
-  padding: 1.2rem;
-  margin-top: .65rem;
-}
-
 .trend-section-header {
   align-items: flex-start;
   display: flex;
@@ -240,19 +232,6 @@ h2 {
   font-size: .73rem;
   line-height: 1.45;
   margin: .7rem 0 0;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: .58rem 0;
-  border-bottom: 1px solid #EEF1F5;
-  color: #4A5568;
-}
-
-.summary-row:last-child {
-  border-bottom: 0;
 }
 
 .footer {

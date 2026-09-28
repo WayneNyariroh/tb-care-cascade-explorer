@@ -197,8 +197,6 @@ def cascade_sankey(
         plot_bgcolor="white",
     )
     return fig
-
-
 def trend_chart(df: pd.DataFrame) -> go.Figure:
     frame = df.dropna(subset=["year"]).copy()
     frame = frame.dropna(
@@ -290,7 +288,6 @@ def trend_chart(df: pd.DataFrame) -> go.Figure:
         font=dict(color=INK),
     )
     return fig
-
 
 def cohort_reconciliation_chart(df: pd.DataFrame) -> go.Figure:
     frame = df.dropna(
@@ -464,9 +461,17 @@ def tbhiv_burden_chart(df: pd.DataFrame) -> go.Figure:
         )
     )
     fig.update_layout(
-        title="Estimated TB incidence among people living with HIV", hovermode="x unified",
-        legend=dict(orientation="h", y=1.08, x=0), margin=dict(l=15, r=15, t=80, b=20),
-        height=400, paper_bgcolor="white", plot_bgcolor="white",
+        title=dict(
+            text="Estimated TB incidence among people living with HIV",
+            x=0,
+            xanchor="left",
+        ),
+        hovermode="x unified",
+        legend=dict(
+            orientation="h", x=0, xanchor="left", y=1.12, yanchor="bottom"
+        ),
+        margin=dict(l=15, r=15, t=150, b=20),
+        height=440, paper_bgcolor="white", plot_bgcolor="white",
         xaxis=dict(title=None, showgrid=False), yaxis=dict(title="People", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
     )
     return fig
@@ -486,9 +491,18 @@ def tbhiv_care_chart(df: pd.DataFrame) -> go.Figure:
             hovertemplate=f"%{{x}}<br>{hover}: %{{y:.1f}}%<extra></extra>",
         ))
     fig.update_layout(
-        title="HIV testing and positivity among notified TB cases", hovermode="x unified",
-        legend=dict(orientation="h", y=1.16, x=0), margin=dict(l=15, r=15, t=105, b=20),
-        height=400, paper_bgcolor="white", plot_bgcolor="white",
+        title=dict(
+            text="HIV testing and positivity among notified TB cases",
+            x=0,
+            xanchor="left",
+        ),
+        hovermode="x unified",
+        # Both charts in this pair use the same title and legend band.
+        legend=dict(
+            orientation="h", x=0, xanchor="left", y=1.12, yanchor="bottom"
+        ),
+        margin=dict(l=15, r=15, t=150, b=20),
+        height=440, paper_bgcolor="white", plot_bgcolor="white",
         xaxis=dict(title=None, showgrid=False), yaxis=dict(title="Percent", range=[0, 100], ticksuffix="%", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
     )
     return fig
@@ -671,7 +685,6 @@ def outcome_composition_chart(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
-
 def coverage_chart(df: pd.DataFrame) -> go.Figure:
     frame = df.dropna(subset=["notification_coverage_pct"]).copy()
     fig = go.Figure(
@@ -702,80 +715,4 @@ def coverage_chart(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
-
-def outcome_bar(metrics: dict, year: Optional[int]) -> go.Figure:
-    cohort = metrics.get("cohort")
-    labels = [
-        "Treatment success",
-        "Died",
-        "Treatment failed",
-        "Lost to follow-up",
-        "Not evaluated",
-        "Residual / unclassified",
-    ]
-    values = [
-        metrics.get("success"),
-        metrics.get("died"),
-        metrics.get("failed"),
-        metrics.get("lost"),
-        metrics.get("not_evaluated"),
-        metrics.get("other_or_unclassified"),
-    ]
-    colors = [GREEN, ORANGE, RED, AMBER, GREY, GREY_LIGHT]
-    clean = [
-        (label, float(value), color)
-        for label, value, color in zip(labels, values, colors)
-        if value is not None and float(value) > 0
-    ]
-    labels = [item[0] for item in clean]
-    values = [item[1] for item in clean]
-    colors = [item[2] for item in clean]
-    percentages = [
-        100 * value / cohort if cohort not in (None, 0) else None
-        for value in values
-    ]
-    text = [
-        f"{value:,.0f} · {percentage:.1f}%"
-        if percentage is not None
-        else f"{value:,.0f}"
-        for value, percentage in zip(values, percentages)
-    ]
-    text_positions = [
-        "inside" if percentage is not None and percentage >= 20 else "outside"
-        for percentage in percentages
-    ]
-    text_colors = [
-        "white" if position == "inside" else INK
-        for position in text_positions
-    ]
-
-    fig = go.Figure(
-        go.Bar(
-            x=values,
-            y=labels,
-            orientation="h",
-            marker_color=colors,
-            text=text,
-            textposition=text_positions,
-            textfont=dict(color=text_colors),
-            insidetextanchor="end",
-            cliponaxis=False,
-            customdata=percentages,
-            hovertemplate=(
-                "%{y}<br><b>%{x:,.0f}</b>"
-                "<br>%{customdata:.1f}% of cohort<extra></extra>"
-            ),
-        )
-    )
-    fig.update_layout(
-        title=f"Treatment outcomes{f' · cohort {year}' if year else ''}",
-        margin=dict(l=128, r=106, t=65, b=28),
-        height=420,
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        xaxis=dict(title="People", gridcolor="#E8ECF2", rangemode="tozero"),
-        yaxis=dict(title=None, autorange="reversed"),
-        font=dict(size=12, color=INK),
-        showlegend=False,
-    )
-    return fig
+# End of chart definitions.

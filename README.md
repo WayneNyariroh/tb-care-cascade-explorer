@@ -38,9 +38,6 @@ The project pulls the WHO Global TB Database at runtime.
   - adult male-to-female notification ratio
   - age/sex reporting coverage, so incomplete classifications are visible
 
-- **Treatment outcomes**
-  - outcome distribution for the latest compatible cohort year
-
 - **Data notes**
   - definitions
   - interpretation caveats
@@ -160,6 +157,10 @@ years for which incidence, notifications and treatment-cohort outcomes are all
 available. Outcomes occur later but remain attributed to the cohort's enrollment
 year. Newer incidence and notification years remain available in the Trends tab;
 the app never substitutes an earlier outcome cohort into a newer cascade.
+
+A **treatment cohort** is the group of people enrolled for treatment during a
+reporting year. Their outcomes are recorded later but remain assigned to the
+year in which they enrolled.
 
 The notification-to-cohort difference reconciles two aggregate definitions and
 must not be interpreted as a count of people who were not treated. The residual

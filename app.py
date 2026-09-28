@@ -10,7 +10,6 @@ from charts import (
     cohort_reconciliation_chart,
     coverage_chart,
     mortality_chart,
-    outcome_bar,
     outcome_composition_chart,
     tbhiv_burden_chart,
     tbhiv_care_chart,
@@ -314,7 +313,7 @@ history = build_country_year_table(
 )
 history = history.loc[history["year"].between(2015, current_year)].copy()
 
-tabs = st.tabs(["Cascade", "Trends", "TB/HIV", "Who is notified?", "Outcomes", "Data notes"])
+tabs = st.tabs(["Cascade", "Trends", "TB/HIV", "Who is notified?", "Data notes"])
 
 with tabs[0]:
     st.markdown(f"## {selected_year} TB care cascade: cohort aligned")
@@ -615,38 +614,6 @@ with tabs[3]:
         st.plotly_chart(adult_sex_ratio_chart(history), width="stretch", config={"displayModeBar": False}, key="adult_sex_ratio_chart")
 
 with tabs[4]:
-    st.markdown("## Treatment outcomes")
-    if cohort is None:
-        st.info("No compatible new-and-relapse treatment cohort was available.")
-    else:
-        oc1, oc2 = st.columns([1.6, 1])
-        with oc1:
-            st.plotly_chart(
-                outcome_bar(om, outcome_year),
-                width="stretch",
-                config={"displayModeBar": False},
-                key="outcomes_tab_chart",
-            )
-        with oc2:
-            st.markdown(
-                f"""
-                <div class="outcome-summary">
-                  <div class="metric-label">Treatment cohort</div>
-                  <div class="big-number">{fmt_int(cohort)}</div>
-                  <div class="metric-note">Cohort year {outcome_year}</div>
-                  <hr>
-                  <div class="summary-row"><span>Successful</span><b>{fmt_int(success)}</b></div>
-                  <div class="summary-row"><span>Died</span><b>{fmt_int(om.get("died"))}</b></div>
-                  <div class="summary-row"><span>Failed</span><b>{fmt_int(om.get("failed"))}</b></div>
-                  <div class="summary-row"><span>Lost to follow-up</span><b>{fmt_int(om.get("lost"))}</b></div>
-                  <div class="summary-row"><span>Not evaluated</span><b>{fmt_int(om.get("not_evaluated"))}</b></div>
-                  <div class="summary-row"><span>Residual / unclassified</span><b>{fmt_int(om.get("other_or_unclassified"))}</b></div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-with tabs[5]:
     st.markdown("## Definitions and data source")
     st.write(
         f"""
@@ -670,6 +637,9 @@ with tabs[5]:
           developing TB during the year.
         - **Notified cases** are new and relapse TB cases diagnosed and officially
           reported to national authorities.
+        - **Treatment cohort** is the group of people enrolled for treatment during
+          a reporting year. Their outcomes are recorded later but remain assigned to
+          the year in which they enrolled.
         - **Notification gap** is calculated here as estimated incidence minus notified
           cases. It is an analytical gap, not a direct enumeration of undiagnosed people.
         - **Treatment success** uses the WHO new-and-relapse treatment cohort where
