@@ -65,7 +65,7 @@ def cascade_sankey(
     ]
     node_colors = [BLUE, "#2E7D6E", "#CBD1D9", PURPLE]
     node_x = [0.01, 0.31, 0.31, 0.59]
-    node_y = [0.10, 0.04, 0.84, 0.04]
+    node_y = [0.10, 0.04, 0.72 if compact else 0.68, 0.04]
     node_customdata = [
         "WHO modelled incidence point estimate",
         "New, recurrent and unknown previous-treatment-history cases reported",
@@ -90,7 +90,7 @@ def cascade_sankey(
         )
         node_colors.append("#E7E9ED")
         node_x.append(0.59)
-        node_y.append(0.97 if compact else 0.90)
+        node_y.append(0.88 if compact else 0.77)
         node_customdata.append(
             "Aggregate definition and reporting difference; not a treatment outcome"
         )
@@ -109,7 +109,7 @@ def cascade_sankey(
         )
         node_colors.append("#E7E9ED")
         node_x.append(0.31)
-        node_y.append(0.97 if compact else 0.90)
+        node_y.append(0.88 if compact else 0.77)
         node_customdata.append(
             "Outcome cohort exceeds the notification aggregate; not a treatment outcome"
         )
@@ -121,7 +121,11 @@ def cascade_sankey(
             ["Reported notifications", "Additional cohort reconciliation"]
         )
 
-    outcome_y = [0.01, 0.64, 0.73, 0.81, 0.87, 0.92]
+    outcome_y = (
+        [0.01, 0.56, 0.66, 0.75, 0.81, 0.84]
+        if compact
+        else [0.01, 0.48, 0.58, 0.67, 0.74, 0.80]
+    )
     for index, (label, value, color, link_color) in enumerate(outcomes):
         outcome_index = len(labels)
         share = 100 * value / cohort if cohort else 0
