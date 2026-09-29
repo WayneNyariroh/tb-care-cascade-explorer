@@ -309,6 +309,47 @@ section[data-testid="stSidebar"] {
   border-right: 1px solid var(--line);
 }
 
+.sidebar-linkedin {
+  align-items: center;
+  border: 1px solid #D7E2F2;
+  border-radius: 9px;
+  color: #244A77 !important;
+  display: flex;
+  font-size: .82rem;
+  font-weight: 600;
+  gap: .5rem;
+  margin: .15rem 0 1rem;
+  padding: .5rem .6rem;
+  text-decoration: none !important;
+  transition: background-color .16s ease, border-color .16s ease;
+}
+
+.sidebar-linkedin:hover {
+  background: #F4F8FD;
+  border-color: #9DB9DB;
+}
+
+.sidebar-linkedin-mark {
+  align-items: center;
+  background: #0A66C2;
+  border-radius: 3px;
+  color: #FFFFFF;
+  display: inline-flex;
+  font-family: Arial, sans-serif;
+  font-size: .7rem;
+  font-weight: 700;
+  height: 1.1rem;
+  justify-content: center;
+  line-height: 1;
+  width: 1.1rem;
+}
+
+.sidebar-linkedin-arrow {
+  color: #6E8098;
+  font-size: .95rem;
+  margin-left: auto;
+}
+
 @media (max-width: 640px) {
   .block-container {
     padding-left: 1rem;

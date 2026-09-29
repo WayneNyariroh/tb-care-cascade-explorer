@@ -146,6 +146,17 @@ st.markdown(
 )
 
 with st.sidebar:
+    st.markdown(
+        """
+        <a class="sidebar-linkedin" href="https://www.linkedin.com/in/waynewillislink/"
+           target="_blank" rel="noopener noreferrer">
+          <span class="sidebar-linkedin-mark">in</span>
+          <span>Wayne Willis on LinkedIn</span>
+          <span class="sidebar-linkedin-arrow">↗</span>
+        </a>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown("### Data controls")
     st.caption("WHO Global TB Database")
 

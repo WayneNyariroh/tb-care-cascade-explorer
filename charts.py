@@ -589,8 +589,12 @@ def tbhiv_outcome_composition_chart(df: pd.DataFrame) -> go.Figure:
         ))
     fig.update_layout(
         title="TB/HIV treatment outcome composition by cohort year", barmode="stack", hovermode="closest",
-        legend=dict(orientation="h", y=1.16, x=0, traceorder="normal"), margin=dict(l=15, r=15, t=105, b=20),
-        height=455, paper_bgcolor="white", plot_bgcolor="white", xaxis=dict(title=None, showgrid=False, dtick=1),
+        legend=dict(
+            orientation="h", x=0, xanchor="left", y=1.03, yanchor="bottom",
+            traceorder="normal", font=dict(size=10),
+        ),
+        margin=dict(l=15, r=15, t=145, b=24),
+        height=485, paper_bgcolor="white", plot_bgcolor="white", xaxis=dict(title=None, showgrid=False, dtick=1),
         yaxis=dict(title="Share of TB/HIV treatment cohort", range=[0, 100], ticksuffix="%", gridcolor="#E8ECF2", zeroline=False), font=dict(color=INK),
     )
     return fig
@@ -706,9 +710,12 @@ def outcome_composition_chart(df: pd.DataFrame) -> go.Figure:
         title="Treatment outcome composition by cohort year",
         barmode="stack",
         hovermode="closest",
-        legend=dict(orientation="h", y=1.16, x=0, traceorder="normal"),
-        margin=dict(l=15, r=15, t=105, b=20),
-        height=455,
+        legend=dict(
+            orientation="h", x=0, xanchor="left", y=1.03, yanchor="bottom",
+            traceorder="normal", font=dict(size=10),
+        ),
+        margin=dict(l=15, r=15, t=145, b=24),
+        height=485,
         paper_bgcolor="white",
         plot_bgcolor="white",
         xaxis=dict(title=None, showgrid=False, dtick=1),
