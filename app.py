@@ -40,7 +40,7 @@ st.set_page_config(
     page_title="TB Care Cascade Explorer",
     page_icon=page_icon,
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 
@@ -134,7 +134,7 @@ load_css()
 
 st.markdown(
     """
-    <div class="eyebrow">PUBLIC HEALTH ANALYTICS | WAYNE WILLIS OMONDI</div>
+    <div class="eyebrow">PUBLIC HEALTH ANALYTICS | WAYNE WILLIS</div>
     <h1> TB Care Cascade Explorer</h1>
     <p class="hero-copy">
       Tracking the path from estimated tuberculosis burden to notification,
