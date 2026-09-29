@@ -450,12 +450,7 @@ with tabs[0]:
                 ],
             ),
             ("Treatment outcomes", outcome_rows),
-        ],
-        (
-            f"{incidence_range} {burden_difference_note} The notification-to-cohort difference "
-            "reconciles two aggregate definitions; it is not a treatment outcome. Residual is the "
-            "cohort total minus the outcome categories separately reported in the export."
-        ),
+        ]
     )
 
     st.markdown(
