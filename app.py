@@ -138,7 +138,8 @@ st.markdown(
     <h1> TB Care Cascade Explorer</h1>
     <p class="hero-copy">
       Tracking the path from estimated tuberculosis burden to notification,
-      treatment and treatment outcomes.
+      treatment and treatment outcomes as well as TB/HIV trends and demographic 
+      information. Use Sidebar to switch country and cascade cohort year.
     </p>
     """,
     unsafe_allow_html=True,
@@ -314,7 +315,7 @@ history = build_country_year_table(
 )
 history = history.loc[history["year"].between(2015, current_year)].copy()
 
-tabs = st.tabs(["Cascade", "Trends", "TB/HIV", "Who is notified?", "Data notes"])
+tabs = st.tabs(["Cascade", "Trends", "TB/HIV", "Demographics", "Data notes"])
 
 with tabs[0]:
     st.markdown(f"## {selected_year} TB care cascade: cohort aligned")
@@ -608,7 +609,7 @@ with tabs[2]:
     st.plotly_chart(tbhiv_mortality_chart(history), width="stretch", config={"displayModeBar": False}, key="tbhiv_mortality_chart")
 
 with tabs[3]:
-    st.markdown("## Who is notified?")
+    st.markdown("## Demographics")
     st.caption(
         "The age and sex profile of reported new and relapse TB notifications. This is not age- or sex-specific incidence, risk, or access-to-care measurement."
     )
